@@ -1,7 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:delivery/pages/login.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
+import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -11,128 +14,214 @@ class RegisterPage extends StatefulWidget {
 }
 
 class _RegisterPageState extends State<RegisterPage> {
-  var phoneCtl = TextEditingController();
-  var nameCtl = TextEditingController();
-  var passwordCtl = TextEditingController();
-  var profilePictureCtl = TextEditingController();
-  var addressCtl = TextEditingController();
-  var altAddressCtl = TextEditingController();
+  final nameCtl = TextEditingController();
+  final phoneCtl = TextEditingController();
+  final passwordCtl = TextEditingController();
+  final profileCtl = TextEditingController();
+  final addressCtl = TextEditingController();
+  final altAddressCtl = TextEditingController();
 
-  var db = FirebaseFirestore.instance;
+  final db = FirebaseFirestore.instance;
 
+  LatLng? addressLocation;
+  LatLng? altAddressLocation;
+
+  final String thunderforestKey = '88f9690d7c84430e8ebb75502e511790';
+
+  // ---------------------------
+  // ดึงตำแหน่งปัจจุบัน
+  // ---------------------------
+  Future<LatLng?> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
+      return null;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return null;
+    }
+
+    Position pos = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    return LatLng(pos.latitude, pos.longitude);
+  }
+
+  // ---------------------------
+  // เปิดแผนที่เลือกตำแหน่ง
+  // ---------------------------
+  Future<LatLng?> _pickLocationDialog(
+    BuildContext context,
+    LatLng? startPos,
+  ) async {
+    LatLng? temp = startPos;
+
+    return await showDialog<LatLng>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('เลือกตำแหน่งบนแผนที่'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: FutureBuilder<LatLng?>(
+              future: _getCurrentLocation(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final initial = snapshot.data!;
+                temp ??= initial;
+
+                return StatefulBuilder(
+                  builder: (context, setMapState) {
+                    return FlutterMap(
+                      options: MapOptions(
+                        initialCenter: temp!,
+                        initialZoom: 16,
+                        onTap: (tapPos, latlng) {
+                          setMapState(() {
+                            temp = latlng;
+                          });
+                        },
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              "https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=$thunderforestKey",
+                          userAgentPackageName: 'com.example.app',
+                        ),
+                        if (temp != null)
+                          MarkerLayer(
+                            markers: [
+                              Marker(
+                                point: temp!,
+                                width: 40,
+                                height: 40,
+                                child: const Icon(
+                                  Icons.location_on,
+                                  color: Colors.red,
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('ยกเลิก'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, temp),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              child: const Text('ยืนยัน'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // ---------------------------
+  // บันทึกข้อมูลผู้ใช้
+  // ---------------------------
+  void addData() async {
+    if (nameCtl.text.isEmpty ||
+        phoneCtl.text.isEmpty ||
+        passwordCtl.text.isEmpty ||
+        addressLocation == null ||
+        altAddressLocation == null) {
+      Get.snackbar("Error", "กรุณากรอกข้อมูลและเลือกตำแหน่งทั้งสองที่ให้ครบ");
+      return;
+    }
+
+    var docRef = db.collection('user').doc();
+    await docRef.set({
+      'uid': docRef.id,
+      'name': nameCtl.text,
+      'phone': phoneCtl.text,
+      'password': passwordCtl.text,
+      'profile_picture': profileCtl.text,
+      'address': addressCtl.text,
+      'alt_address': altAddressCtl.text,
+      'status': 'user',
+      'createdAt': DateTime.now(),
+      'location1': {
+        'latitude': addressLocation!.latitude,
+        'longitude': addressLocation!.longitude,
+      },
+      'location2': {
+        'latitude': altAddressLocation!.latitude,
+        'longitude': altAddressLocation!.longitude,
+      },
+    });
+
+    Get.snackbar("สำเร็จ", "สมัครสมาชิกเรียบร้อยแล้ว");
+    Get.to(() => const LoginPage());
+  }
+
+  // ---------------------------
+  // UI
+  // ---------------------------
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.orange.shade50,
-      body: Center(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
-
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 11, 4, 2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.asset(
-                    'assets/images/logo.jpg',
-                    width: 120,
-                    height: 120,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.delivery_dining,
-                        size: 60,
-                        color: Colors.white,
-                      );
-                    },
-                  ),
-                ),
+      appBar: AppBar(title: const Text("Register")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildTextField("Name", nameCtl),
+            _buildTextField(
+              "Phone",
+              phoneCtl,
+              keyboardType: TextInputType.phone,
+            ),
+            _buildTextField("Password", passwordCtl, obscureText: true),
+            _buildTextField("Profile Picture URL", profileCtl),
+            _buildTextField("Address", addressCtl),
+            _buildSelectButton(
+              context,
+              "เลือกตำแหน่งที่อยู่หลัก",
+              addressLocation,
+              (loc) => setState(() => addressLocation = loc),
+            ),
+            _buildTextField("Alternate Address", altAddressCtl),
+            _buildSelectButton(
+              context,
+              "เลือกตำแหน่งที่อยู่สำรอง",
+              altAddressLocation,
+              (loc) => setState(() => altAddressLocation = loc),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: addData,
+              style: ElevatedButton.styleFrom(
+                minimumSize: const Size(200, 50),
+                backgroundColor: Colors.orange,
               ),
-
-              const SizedBox(height: 30),
-              Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade300,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text(
-                      "Register",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    _buildTextField("Name", nameCtl),
-                    _buildTextField(
-                      "Phone",
-                      phoneCtl,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    _buildTextField("Password", passwordCtl, obscureText: true),
-                    _buildTextField("Picture Profile", profilePictureCtl),
-                    _buildTextField("Address", addressCtl),
-                    _buildTextField("Alternative Address", altAddressCtl),
-
-                    const SizedBox(height: 25),
-
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            minimumSize: const Size(120, 45),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          onPressed: () {
-                            Get.back();
-                          },
-                          child: const Text(
-                            "Cancel",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange.shade600,
-                            minimumSize: const Size(120, 45),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                          onPressed: addData,
-                          child: const Text(
-                            "Confirm",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+              child: const Text("Confirm"),
+            ),
+          ],
         ),
       ),
     );
   }
 
+  // ---------------------------
+  // Helper Widgets
+  // ---------------------------
   Widget _buildTextField(
     String label,
     TextEditingController ctl, {
@@ -145,35 +234,42 @@ class _RegisterPageState extends State<RegisterPage> {
         controller: ctl,
         obscureText: obscureText,
         keyboardType: keyboardType,
-
         decoration: InputDecoration(
           labelText: label,
           filled: true,
           fillColor: Colors.white,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 15,
-            vertical: 12,
-          ),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
 
-  void addData() async {
-    var docRef = db.collection('user').doc();
-    var data = {
-      'uid': docRef.id,
-      'name': nameCtl.text,
-      'phone': phoneCtl.text,
-      'password': passwordCtl.text,
-      'profile_picture': profilePictureCtl.text,
-      'address': addressCtl.text,
-      'alt_address': altAddressCtl.text,
-      'status': 'user',
-      'createAt': DateTime.timestamp(),
-    };
-    await docRef.set(data);
-    Get.to(() => const LoginPage());
+  Widget _buildSelectButton(
+    BuildContext context,
+    String label,
+    LatLng? loc,
+    Function(LatLng?) onSelect,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.map),
+        label: Text(
+          loc == null
+              ? label
+              : "$label (เลือกแล้ว: ${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)})",
+        ),
+        onPressed: () async {
+          LatLng? selected = await _pickLocationDialog(context, loc);
+          if (selected != null) onSelect(selected);
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+          side: const BorderSide(color: Colors.orange),
+          minimumSize: const Size(double.infinity, 50),
+        ),
+      ),
+    );
   }
 }

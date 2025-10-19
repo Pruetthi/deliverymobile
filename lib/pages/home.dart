@@ -1,3 +1,4 @@
+import 'package:delivery/pages/create_job_page.dart';
 import 'package:flutter/material.dart';
 import '../widgets/custom_bottom_bar.dart';
 
@@ -134,9 +135,15 @@ class _HomePageState extends State<HomePage> {
                             icon: Icons.send,
                             label: 'ส่งสินค้า',
                             onTap: () {
-                              // Navigate to send package
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const CreateJobPage(),
+                                ),
+                              );
                             },
                           ),
+
                           _buildMenuCard(
                             icon: Icons.inventory_2,
                             label: 'สินค้าที่จะถึง',

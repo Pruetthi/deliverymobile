@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/rider_bottom_bar.dart';
 
 class HomeRiderPage extends StatefulWidget {
@@ -12,16 +13,23 @@ class HomeRiderPage extends StatefulWidget {
 class _HomeRiderPageState extends State<HomeRiderPage> {
   int _selectedIndex = 0;
 
-  // Mock data for jobs
-  final List<Map<String, dynamic>> jobs = [
-    {'id': 1, 'status': 'รอไปรับ', 'description': 'หมายเลขการจัดส่ง : 1'},
-    {'id': 2, 'status': 'รับงาน', 'description': 'หมายเลขการจัดส่ง : 2'},
-  ];
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  // 🔹 Stream ดึงงานทั้งหมดที่ status = 1 (รอจัดส่ง)
+  Stream<List<Map<String, dynamic>>> fetchJobs() {
+    return FirebaseFirestore.instance
+        .collection('jobs')
+        .where('status', isEqualTo: 1)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => doc.data() as Map<String, dynamic>)
+              .toList(),
+        );
   }
 
   @override
@@ -116,7 +124,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                                     ),
                                   ),
                                   Text(
-                                    'คุณ ${widget.riderData['name'] ?? 'บารอน อีไระ'}',
+                                    'คุณ ${widget.riderData['name'] ?? 'ผู้ขนส่ง'}',
                                     style: TextStyle(
                                       fontSize: 15,
                                       color: Colors.orange.shade900,
@@ -144,8 +152,29 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
 
                       const SizedBox(height: 12),
 
-                      // Job Cards
-                      ...jobs.map((job) => _buildJobCard(job)).toList(),
+                      // 🔹 StreamBuilder ดึงงานจริงจาก Firestore
+                      StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: fetchJobs(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return const Text('ไม่มีงานจัดส่งในขณะนี้');
+                          }
+
+                          final jobs = snapshot.data!;
+                          return Column(
+                            children: jobs
+                                .map((job) => _buildJobCard(job))
+                                .toList(),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -184,7 +213,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  job['description'],
+                  'หมายเลขการจัดส่ง: ${job['receiver_uid'] ?? ''}',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.white,
@@ -193,8 +222,33 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                 ),
                 const SizedBox(height: 4),
                 Text(
+                  'ชื่อผู้รับ: ${job['receiver_name'] ?? ''}',
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+                Text(
                   'สถานะ: ${job['status']}',
                   style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+                Text(
+                  'สินค้า: ${job['item_name']}',
+                  style: const TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 14,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '(${job['latitude'].toStringAsFixed(5)}, ${job['longitude'].toStringAsFixed(5)})',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -206,7 +260,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              job['status'],
+              job['status'].toString(),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.bold,
