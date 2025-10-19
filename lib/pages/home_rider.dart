@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/rider_bottom_bar.dart';
 
 class HomeRiderPage extends StatefulWidget {
   final Map<String, dynamic> riderData;
@@ -16,6 +17,12 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
     {'id': 1, 'status': 'รอไปรับ', 'description': 'หมายเลขการจัดส่ง : 1'},
     {'id': 2, 'status': 'รับงาน', 'description': 'หมายเลขการจัดส่ง : 2'},
   ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -147,47 +154,9 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFFFF6B35),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildBottomNavItem(
-                  icon: Icons.home,
-                  label: 'หน้าแรก',
-                  isSelected: _selectedIndex == 0,
-                  onTap: () {
-                    setState(() {
-                      _selectedIndex = 0;
-                    });
-                  },
-                ),
-                _buildBottomNavItem(
-                  icon: Icons.person,
-                  label: 'โปรไฟล์',
-                  isSelected: _selectedIndex == 1,
-                  onTap: () {
-                    setState(() {
-                      _selectedIndex = 1;
-                    });
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
+      bottomNavigationBar: RiderBottomBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }
@@ -243,32 +212,6 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                 fontWeight: FontWeight.bold,
                 color: Colors.orange.shade700,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavItem({
-    required IconData icon,
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
             ),
           ),
         ],
