@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CreateJobPage extends StatefulWidget {
-  const CreateJobPage({super.key});
+  final Map<String, dynamic> userData; // ✅ รับข้อมูลผู้ใช้จากหน้า HomePage
+
+  const CreateJobPage({super.key, required this.userData});
 
   @override
   State<CreateJobPage> createState() => _CreateJobPageState();
@@ -79,15 +81,25 @@ class _CreateJobPageState extends State<CreateJobPage> {
 
     try {
       await _firestore.collection('jobs').add({
+        // ✅ ข้อมูลผู้รับ
         "receiver_phone": receiverData!['phone'],
         "receiver_name": receiverData!['name'],
         "receiver_uid": receiverData!['uid'],
+
+        // ✅ ข้อมูลผู้ส่ง
+        "sender_uid": widget.userData['uid'],
+        "sender_name": widget.userData['name'],
+        "sender_phone": widget.userData['phone'],
+
+        // ✅ ที่อยู่และข้อมูลสินค้า
         "address_type": selectedType,
         "address_text": selectedAddress!['text'],
         "latitude": selectedAddress!['latitude'],
         "longitude": selectedAddress!['longitude'],
         "item_name": itemNameController.text,
         "item_detail": itemDetailController.text,
+
+        // ✅ สถานะและเวลา
         "status": 1,
         "created_at": FieldValue.serverTimestamp(),
       });

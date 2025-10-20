@@ -1,4 +1,6 @@
 import 'package:delivery/pages/create_job_page.dart';
+import 'package:delivery/pages/my_received_jobs_page.dart';
+import 'package:delivery/pages/my_sent_jobs_page.dart';
 import 'package:flutter/material.dart';
 import '../widgets/custom_bottom_bar.dart';
 
@@ -138,7 +140,8 @@ class _HomePageState extends State<HomePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const CreateJobPage(),
+                                  builder: (_) =>
+                                      CreateJobPage(userData: widget.userData),
                                 ),
                               );
                             },
@@ -148,7 +151,14 @@ class _HomePageState extends State<HomePage> {
                             icon: Icons.inventory_2,
                             label: 'สินค้าที่จะถึง',
                             onTap: () {
-                              // Navigate to incoming packages
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MyReceivedJobsPage(
+                                    userData: widget.userData,
+                                  ),
+                                ),
+                              );
                             },
                           ),
                           _buildMenuCard(
@@ -162,7 +172,13 @@ class _HomePageState extends State<HomePage> {
                             icon: Icons.inventory,
                             label: 'สินค้าที่กำลังส่ง',
                             onTap: () {
-                              // Navigate to delivering packages
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      MySentJobsPage(userData: widget.userData),
+                                ),
+                              );
                             },
                           ),
                         ],
