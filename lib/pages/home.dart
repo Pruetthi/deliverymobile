@@ -192,6 +192,7 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       bottomNavigationBar: CustomBottomBar(
+        userData: widget.userData,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
