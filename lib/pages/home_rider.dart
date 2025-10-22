@@ -206,8 +206,28 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // แสดงรูปสินค้า ถ้ามี
+          if (job['item_image'] != null && job['item_image'] != "")
+            Container(
+              width: 60,
+              height: 60,
+              margin: const EdgeInsets.only(right: 12),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  job['item_image'],
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.broken_image,
+                      color: Colors.white70,
+                    );
+                  },
+                ),
+              ),
+            ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
