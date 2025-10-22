@@ -1,13 +1,17 @@
+import 'package:delivery/pages/home_rider.dart';
+import 'package:delivery/pages/profile.dart';
 import 'package:flutter/material.dart';
 
 class RiderBottomBar extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
+  final Map<String, dynamic> userData; // ✅ เพิ่ม userData
 
   const RiderBottomBar({
     super.key,
     required this.currentIndex,
     required this.onTap,
+    required this.userData, // ✅ รับ userData
   });
 
   @override
@@ -33,13 +37,29 @@ class RiderBottomBar extends StatelessWidget {
                 icon: Icons.home,
                 label: 'หน้าแรก',
                 isSelected: currentIndex == 0,
-                onTap: () => onTap(0),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => HomeRiderPage(riderData: userData),
+                    ),
+                  );
+                  onTap(0);
+                },
               ),
               _buildBottomNavItem(
                 icon: Icons.person,
                 label: 'โปรไฟล์',
                 isSelected: currentIndex == 1,
-                onTap: () => onTap(1),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProfilePage(userData: userData),
+                    ),
+                  );
+                  onTap(1);
+                },
               ),
             ],
           ),

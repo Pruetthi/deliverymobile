@@ -80,7 +80,7 @@ class _HomePageState extends State<HomePage> {
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(12),
+                              padding: const EdgeInsets.all(5),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
@@ -89,10 +89,31 @@ class _HomePageState extends State<HomePage> {
                                   width: 2,
                                 ),
                               ),
-                              child: Icon(
-                                Icons.person,
-                                size: 32,
-                                color: Colors.orange.shade800,
+                              child: SizedBox(
+                                width: 60,
+                                height: 60,
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(30),
+                                  child:
+                                      widget.userData['profile_picture'] != null
+                                      ? Image.network(
+                                          widget.userData['profile_picture'],
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                                return Icon(
+                                                  Icons.account_circle,
+                                                  size: 60,
+                                                  color: Colors.grey.shade700,
+                                                );
+                                              },
+                                        )
+                                      : Icon(
+                                          Icons.account_circle,
+                                          size: 60,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 16),

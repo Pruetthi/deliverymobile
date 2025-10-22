@@ -95,7 +95,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(14),
+                              padding: const EdgeInsets.all(5),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 shape: BoxShape.circle,
@@ -104,10 +104,32 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                                   width: 3,
                                 ),
                               ),
-                              child: Icon(
-                                Icons.person,
-                                size: 32,
-                                color: Colors.orange.shade800,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(40),
+                                child:
+                                    widget.riderData['profile_picture'] !=
+                                            null &&
+                                        widget
+                                            .riderData['profile_picture']
+                                            .isNotEmpty
+                                    ? Image.network(
+                                        widget.riderData['profile_picture'],
+                                        width: 60,
+                                        height: 60,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (context, _, __) {
+                                          return Icon(
+                                            Icons.account_circle,
+                                            size: 60,
+                                            color: Colors.grey.shade700,
+                                          );
+                                        },
+                                      )
+                                    : Icon(
+                                        Icons.account_circle,
+                                        size: 60,
+                                        color: Colors.grey.shade700,
+                                      ),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -186,6 +208,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
       bottomNavigationBar: RiderBottomBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        userData: widget.riderData,
       ),
     );
   }

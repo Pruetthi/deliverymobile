@@ -1,9 +1,12 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
 import 'login.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -17,16 +20,52 @@ class _RegisterPageState extends State<RegisterPage> {
   final nameCtl = TextEditingController();
   final phoneCtl = TextEditingController();
   final passwordCtl = TextEditingController();
-  final profileCtl = TextEditingController();
   final addressCtl = TextEditingController();
   final altAddressCtl = TextEditingController();
 
   final db = FirebaseFirestore.instance;
-
   LatLng? addressLocation;
   LatLng? altAddressLocation;
 
   final String thunderforestKey = '88f9690d7c84430e8ebb75502e511790';
+
+  // ✅ สำหรับเลือกรูป
+  File? _pickedImage;
+  final ImagePicker _picker = ImagePicker();
+  final cloudinary = CloudinaryPublic(
+    'daqjnjmto', // 👉 เปลี่ยนเป็น Cloud name ของคุณ
+    'unsigned_delivery', // 👉 upload preset ที่ตั้งไว้ใน Cloudinary
+    cache: false,
+  );
+
+  bool _loading = false;
+
+  // ---------------------------
+  // เลือกรูปจากแกลเลอรี
+  // ---------------------------
+  Future<void> pickImage() async {
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _pickedImage = File(image.path);
+      });
+    }
+  }
+
+  // ---------------------------
+  // อัปโหลดรูปไป Cloudinary
+  // ---------------------------
+  Future<String?> uploadImage(File image) async {
+    try {
+      CloudinaryResponse response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(image.path, folder: "user_profiles"),
+      );
+      return response.secureUrl;
+    } catch (e) {
+      Get.snackbar("Error", "อัปโหลดรูปไม่สำเร็จ: $e");
+      return null;
+    }
+  }
 
   // ---------------------------
   // ดึงตำแหน่งปัจจุบัน
@@ -141,8 +180,15 @@ class _RegisterPageState extends State<RegisterPage> {
         passwordCtl.text.isEmpty ||
         addressLocation == null ||
         altAddressLocation == null) {
-      Get.snackbar("Error", "กรุณากรอกข้อมูลและเลือกตำแหน่งทั้งสองที่ให้ครบ");
+      Get.snackbar("Error", "กรุณากรอกข้อมูลให้ครบ");
       return;
+    }
+
+    setState(() => _loading = true);
+
+    String? imageUrl;
+    if (_pickedImage != null) {
+      imageUrl = await uploadImage(_pickedImage!);
     }
 
     var docRef = db.collection('user').doc();
@@ -151,7 +197,7 @@ class _RegisterPageState extends State<RegisterPage> {
       'name': nameCtl.text,
       'phone': phoneCtl.text,
       'password': passwordCtl.text,
-      'profile_picture': profileCtl.text,
+      'profile_picture': imageUrl ?? '',
       'address': addressCtl.text,
       'alt_address': altAddressCtl.text,
       'status': 'user',
@@ -166,6 +212,7 @@ class _RegisterPageState extends State<RegisterPage> {
       },
     });
 
+    setState(() => _loading = false);
     Get.snackbar("สำเร็จ", "สมัครสมาชิกเรียบร้อยแล้ว");
     Get.to(() => const LoginPage());
   }
@@ -189,7 +236,6 @@ class _RegisterPageState extends State<RegisterPage> {
               keyboardType: TextInputType.phone,
             ),
             _buildTextField("Password", passwordCtl, obscureText: true),
-            _buildTextField("Profile Picture URL", profileCtl),
             _buildTextField("Address", addressCtl),
             _buildSelectButton(
               context,
@@ -204,14 +250,25 @@ class _RegisterPageState extends State<RegisterPage> {
               altAddressLocation,
               (loc) => setState(() => altAddressLocation = loc),
             ),
+            const SizedBox(height: 10),
+            if (_pickedImage != null)
+              Image.file(_pickedImage!, height: 150, fit: BoxFit.cover),
+            ElevatedButton.icon(
+              onPressed: pickImage,
+              icon: const Icon(Icons.photo),
+              label: const Text("เลือกรูปโปรไฟล์"),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: addData,
+              onPressed: _loading ? null : addData,
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(200, 50),
                 backgroundColor: Colors.orange,
               ),
-              child: const Text("Confirm"),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Confirm"),
             ),
           ],
         ),

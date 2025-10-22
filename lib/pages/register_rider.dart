@@ -1,8 +1,10 @@
-import 'dart:developer';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:delivery/pages/login.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloudinary_public/cloudinary_public.dart';
+import 'login.dart';
 
 class RegisterRiderPage extends StatefulWidget {
   const RegisterRiderPage({super.key});
@@ -12,283 +14,243 @@ class RegisterRiderPage extends StatefulWidget {
 }
 
 class _RegisterRiderPageState extends State<RegisterRiderPage> {
-  var phoneCtl = TextEditingController();
-  var nameCtl = TextEditingController();
-  var passwordCtl = TextEditingController();
-  var profilePictureCtl = TextEditingController();
-  var vehicleNumberCtl = TextEditingController();
-  var vehiclePictureCtl = TextEditingController();
-  var db = FirebaseFirestore.instance;
+  final phoneCtl = TextEditingController();
+  final nameCtl = TextEditingController();
+  final passwordCtl = TextEditingController();
+  final vehicleNumberCtl = TextEditingController();
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF5F1EB),
-      body: SingleChildScrollView(
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
-            child: Column(
-              children: [
-                const SizedBox(height: 40),
+  File? profileImage;
+  File? vehicleImage;
 
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 11, 4, 2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: Image.asset(
-                      'assets/images/logo.jpg',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Icon(
-                          Icons.delivery_dining,
-                          size: 60,
-                          color: Colors.white,
-                        );
-                      },
-                    ),
-                  ),
-                ),
+  String? profileImageUrl;
+  String? vehicleImageUrl;
 
-                const SizedBox(height: 8),
+  final db = FirebaseFirestore.instance;
+  final ImagePicker _picker = ImagePicker();
 
-                // const Text(
-                //   'Delivery',
-                //   style: TextStyle(
-                //     fontSize: 24,
-                //     fontWeight: FontWeight.bold,
-                //     color: Color(0xFFFF6B35),
-                //   ),
-                // ),
-                const SizedBox(height: 30),
+  // ✅ ใช้ CloudinaryPublic ตามที่คุณให้
+  final cloudinary = CloudinaryPublic(
+    'daqjnjmto', // Cloud name
+    'unsigned_delivery', // Upload preset
+    cache: false,
+  );
 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF4B942),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Center(
-                        child: Text(
-                          'Register To Rider',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF2C1810),
-                          ),
-                        ),
-                      ),
+  bool _loading = false;
 
-                      const SizedBox(height: 20),
-                      _buildInputField('Phone', phoneCtl, TextInputType.phone),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        'Password',
-                        passwordCtl,
-                        TextInputType.text,
-                        isPassword: true,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildInputField('Name', nameCtl, TextInputType.name),
-                      const SizedBox(height: 16),
-
-                      _buildInputField(
-                        'Picture Profile',
-                        profilePictureCtl,
-                        TextInputType.url,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildInputField(
-                        'Picture Vehicle',
-                        vehiclePictureCtl,
-                        TextInputType.url,
-                      ),
-                      const SizedBox(height: 16),
-
-                      _buildInputField(
-                        'Vehicle registration',
-                        vehicleNumberCtl,
-                        TextInputType.text,
-                      ),
-
-                      const SizedBox(height: 30),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Get.back();
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC3545),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: addData,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF6B35),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Confirm',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-              ],
-            ),
-          ),
-        ),
-      ),
+  // ------------------------
+  // เลือกรูป
+  // ------------------------
+  Future<void> pickImage(bool isProfile) async {
+    final XFile? pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
     );
+    if (pickedFile != null) {
+      setState(() {
+        if (isProfile) {
+          profileImage = File(pickedFile.path);
+        } else {
+          vehicleImage = File(pickedFile.path);
+        }
+      });
+    }
   }
 
-  Widget _buildInputField(
-    String label,
-    TextEditingController controller,
-    TextInputType keyboardType, {
-    bool isPassword = false,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F1EB),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        obscureText: isPassword,
-        decoration: InputDecoration(
-          hintText: label,
-          hintStyle: const TextStyle(color: Color(0xFF999999), fontSize: 14),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 12,
-          ),
-        ),
-      ),
-    );
+  // ------------------------
+  // อัปโหลดรูปไป Cloudinary
+  // ------------------------
+  Future<String?> uploadFile(File file) async {
+    try {
+      final response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(file.path, folder: "riders"),
+      );
+      return response.secureUrl;
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "อัปโหลดรูปไม่สำเร็จ: $e",
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return null;
+    }
   }
 
+  // ------------------------
+  // สมัครสมาชิก
+  // ------------------------
   void addData() async {
     if (nameCtl.text.isEmpty ||
         phoneCtl.text.isEmpty ||
         passwordCtl.text.isEmpty ||
-        profilePictureCtl.text.isEmpty ||
         vehicleNumberCtl.text.isEmpty ||
-        vehiclePictureCtl.text.isEmpty) {
+        profileImage == null ||
+        vehicleImage == null) {
       Get.snackbar(
-        'Error',
-        'Please fill in all fields',
-        snackPosition: SnackPosition.BOTTOM,
+        "Error",
+        "กรุณากรอกข้อมูลและเลือกรูปให้ครบ",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
       return;
     }
 
-    try {
-      var existingUser = await db
-          .collection('rider')
-          .where('phone', isEqualTo: phoneCtl.text)
-          .limit(1)
-          .get();
+    setState(() => _loading = true);
 
-      if (existingUser.docs.isNotEmpty) {
-        Get.snackbar(
-          'Error',
-          'This phone number is already registered',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-        );
-        return;
-      }
+    // อัปโหลดรูป
+    profileImageUrl = await uploadFile(profileImage!);
+    vehicleImageUrl = await uploadFile(vehicleImage!);
 
-      var docRef = db.collection('rider').doc();
-      var data = {
-        'rid': docRef.id,
-        'name': nameCtl.text,
-        'phone': phoneCtl.text,
-        'password': passwordCtl.text,
-        'profile_picture': profilePictureCtl.text,
-        'vehicle_number': vehicleNumberCtl.text,
-        'vehicle_picture': vehiclePictureCtl.text,
-        'status': 'rider',
-        'createAt': DateTime.now(),
-      };
+    if (profileImageUrl == null || vehicleImageUrl == null) {
+      setState(() => _loading = false);
+      return; // ถ้าอัปโหลดไม่สำเร็จ
+    }
 
-      await docRef.set(data);
+    // ตรวจสอบเบอร์ซ้ำ
+    var existingUser = await db
+        .collection('rider')
+        .where('phone', isEqualTo: phoneCtl.text)
+        .limit(1)
+        .get();
 
-      log('Rider registered successfully: ${nameCtl.text}');
-
+    if (existingUser.docs.isNotEmpty) {
       Get.snackbar(
-        'Success',
-        'Rider registration successful!',
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
-
-      Get.off(() => const LoginPage());
-    } catch (e) {
-      log('Registration error: $e');
-      Get.snackbar(
-        'Error',
-        'Registration failed. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
+        "Error",
+        "เบอร์นี้เคยลงทะเบียนแล้ว",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+      setState(() => _loading = false);
+      return;
     }
+
+    // บันทึกข้อมูล
+    var docRef = db.collection('rider').doc();
+    await docRef.set({
+      'rid': docRef.id,
+      'name': nameCtl.text,
+      'phone': phoneCtl.text,
+      'password': passwordCtl.text,
+      'vehicle_number': vehicleNumberCtl.text,
+      'profile_picture': profileImageUrl,
+      'vehicle_picture': vehicleImageUrl,
+      'status': 'rider',
+      'createdAt': DateTime.now(),
+    });
+
+    setState(() => _loading = false);
+
+    Get.snackbar(
+      "สำเร็จ",
+      "สมัครสมาชิกเรียบร้อยแล้ว",
+      backgroundColor: Colors.green,
+      colorText: Colors.white,
+    );
+
+    Get.off(() => const LoginPage());
+  }
+
+  // ------------------------
+  // UI
+  // ------------------------
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F1EB),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            const Text(
+              "Register as Rider",
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+
+            const SizedBox(height: 20),
+            // รูปโปรไฟล์
+            GestureDetector(
+              onTap: () => pickImage(true),
+              child: CircleAvatar(
+                radius: 50,
+                backgroundImage: profileImage != null
+                    ? FileImage(profileImage!)
+                    : null,
+                child: profileImage == null
+                    ? const Icon(Icons.person, size: 50)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text("แตะเพื่อเลือกรูปโปรไฟล์"),
+
+            const SizedBox(height: 20),
+            // รูปรถ
+            GestureDetector(
+              onTap: () => pickImage(false),
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(12),
+                  image: vehicleImage != null
+                      ? DecorationImage(
+                          image: FileImage(vehicleImage!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: vehicleImage == null
+                    ? const Icon(Icons.directions_bike, size: 50)
+                    : null,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text("แตะเพื่อเลือกรูปรถ"),
+
+            const SizedBox(height: 20),
+            _buildTextField("Name", nameCtl),
+            _buildTextField("Phone", phoneCtl, type: TextInputType.phone),
+            _buildTextField("Password", passwordCtl, obscure: true),
+            _buildTextField("Vehicle Registration", vehicleNumberCtl),
+
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loading ? null : addData,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: _loading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Confirm"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    TextEditingController ctl, {
+    bool obscure = false,
+    TextInputType type = TextInputType.text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: TextField(
+        controller: ctl,
+        obscureText: obscure,
+        keyboardType: type,
+        decoration: InputDecoration(
+          labelText: label,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
   }
 
   @override
@@ -296,9 +258,7 @@ class _RegisterRiderPageState extends State<RegisterRiderPage> {
     phoneCtl.dispose();
     nameCtl.dispose();
     passwordCtl.dispose();
-    profilePictureCtl.dispose();
     vehicleNumberCtl.dispose();
-    vehiclePictureCtl.dispose();
     super.dispose();
   }
 }

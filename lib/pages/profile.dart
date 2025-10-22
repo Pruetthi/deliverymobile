@@ -18,9 +18,6 @@ class _ProfilePageState extends State<ProfilePage> {
   String? address2;
   bool isLoading = true;
 
-  // ใส่ API Key ของ Google Maps
-  final String googleApiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
-
   @override
   void initState() {
     super.initState();
@@ -40,7 +37,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ? const Center(child: CircularProgressIndicator())
           : Center(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 10, 10, 50),
+                padding: const EdgeInsets.all(16.0),
                 child: Card(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -49,51 +46,151 @@ class _ProfilePageState extends State<ProfilePage> {
                   elevation: 4,
                   child: Padding(
                     padding: const EdgeInsets.all(20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'ชื่อ: ${widget.userData['name']}',
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        Text(
-                          'เบอร์โทร: ${widget.userData['phone']}',
-                          style: const TextStyle(fontSize: 18),
-                        ),
-                        const SizedBox(height: 20),
-                        Text(
-                          'ที่อยู่ 1: ${address1 ?? 'ไม่พบข้อมูล'}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        Text(
-                          'ที่อยู่ 2: ${address2 ?? 'ไม่พบข้อมูล'}',
-                          style: const TextStyle(fontSize: 16),
-                        ),
-                        const SizedBox(height: 30),
-                        ElevatedButton.icon(
-                          icon: const Icon(Icons.logout),
-                          label: const Text("Logout"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.redAccent,
-                            minimumSize: const Size(double.infinity, 50),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => LoginPage()),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
+                    child: widget.userData['status'] == 'user'
+                        ? _buildUserProfile()
+                        : _buildRiderProfile(),
                   ),
                 ),
               ),
             ),
+    );
+  }
+
+  // ---------------------------
+  // UI สำหรับ user
+  // ---------------------------
+  Widget _buildUserProfile() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildProfilePicture(widget.userData['profile_picture']),
+        Text(
+          'ชื่อ: ${widget.userData['name']}',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          'เบอร์โทร: ${widget.userData['phone']}',
+          style: const TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          'ที่อยู่ 1: ${address1 ?? 'ไม่พบข้อมูล'}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        Text(
+          'ที่อยู่ 2: ${address2 ?? 'ไม่พบข้อมูล'}',
+          style: const TextStyle(fontSize: 16),
+        ),
+        const SizedBox(height: 30),
+        _buildLogoutButton(),
+      ],
+    );
+  }
+
+  // ---------------------------
+  // UI สำหรับ rider
+  // ---------------------------
+  Widget _buildRiderProfile() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildProfilePicture(widget.userData['profile_picture']),
+        const SizedBox(height: 8),
+        Text(
+          'ชื่อ: ${widget.userData['name']}',
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        Text(
+          'เบอร์โทร: ${widget.userData['phone']}',
+          style: const TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'ทะเบียนรถ: ${widget.userData['vehicle_number']}',
+          style: const TextStyle(fontSize: 18),
+        ),
+        const SizedBox(height: 16),
+        _buildVehiclePicture(widget.userData['vehicle_picture']),
+        const SizedBox(height: 30),
+        _buildLogoutButton(),
+      ],
+    );
+  }
+
+  // ---------------------------
+  // Widget รูปโปรไฟล์
+  // ---------------------------
+  Widget _buildProfilePicture(String? url) {
+    return SizedBox(
+      width: 100,
+      height: 100,
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.orange.shade800, width: 2),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(50),
+          child: url != null && url.isNotEmpty
+              ? Image.network(
+                  url,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, _, __) {
+                    return Icon(
+                      Icons.account_circle,
+                      size: 100,
+                      color: Colors.grey.shade700,
+                    );
+                  },
+                )
+              : Icon(
+                  Icons.account_circle,
+                  size: 100,
+                  color: Colors.grey.shade700,
+                ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------
+  // Widget รูปรถ
+  // ---------------------------
+  Widget _buildVehiclePicture(String? url) {
+    return SizedBox(
+      width: 120,
+      height: 80,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(12),
+          image: url != null && url.isNotEmpty
+              ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
+              : null,
+        ),
+        child: url == null || url.isEmpty
+            ? const Icon(Icons.directions_bike, size: 50)
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return ElevatedButton.icon(
+      icon: const Icon(Icons.logout),
+      label: const Text("Logout"),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.redAccent,
+        minimumSize: const Size(double.infinity, 50),
+      ),
+      onPressed: () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => LoginPage()),
+        );
+      },
     );
   }
 
@@ -139,27 +236,6 @@ class _ProfilePageState extends State<ProfilePage> {
         isLoading = false;
       });
       debugPrint('Error loading address: $e');
-    }
-  }
-
-  /// fallback ใช้ Google Maps API
-  Future<String> getAddress(double lat, double lon) async {
-    final apiKey = 'YOUR_API_KEY';
-    final url = Uri.parse(
-      'https://api.longdo.com/map/services/address?lat=$lat&lon=$lon&key=635aa8d2ec0896c5af0828783729e910',
-    );
-
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      if (data['province'] != null) {
-        return '${data['subdistrict']}, ${data['district']}, ${data['province']}';
-      } else {
-        return 'ไม่พบข้อมูลที่อยู่';
-      }
-    } else {
-      return 'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์';
     }
   }
 }
