@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:delivery/pages/login.dart';
+import 'package:delivery/widgets/custom_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 
 class ProfilePage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -18,10 +16,51 @@ class _ProfilePageState extends State<ProfilePage> {
   String? address2;
   bool isLoading = true;
 
+  int _selectedIndex = 0;
+
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   void initState() {
     super.initState();
     _loadAddresses();
+  }
+
+  Future<void> _loadAddresses() async {
+    try {
+      final loc1 = widget.userData['location1'];
+      final loc2 = widget.userData['location2'];
+
+      if (loc1 != null) {
+        final placemarks1 = await placemarkFromCoordinates(
+          loc1['latitude'],
+          loc1['longitude'],
+        );
+        final place1 = placemarks1.first;
+        address1 =
+            "${place1.street ?? ''}, ${place1.subLocality ?? ''}, ${place1.locality ?? ''}, ${place1.administrativeArea ?? ''}, ${place1.country ?? ''}";
+      }
+
+      if (loc2 != null) {
+        final placemarks2 = await placemarkFromCoordinates(
+          loc2['latitude'],
+          loc2['longitude'],
+        );
+        final place2 = placemarks2.first;
+        address2 =
+            "${place2.street ?? ''}, ${place2.subLocality ?? ''}, ${place2.locality ?? ''}, ${place2.administrativeArea ?? ''}, ${place2.country ?? ''}";
+      }
+    } catch (e) {
+      debugPrint('Error loading address: $e');
+      address1 ??= "ไม่พบข้อมูล";
+      address2 ??= "ไม่พบข้อมูล";
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -53,12 +92,14 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
+      bottomNavigationBar: CustomBottomBar(
+        userData: widget.userData,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+      ),
     );
   }
 
-  // ---------------------------
-  // UI สำหรับ user
-  // ---------------------------
   Widget _buildUserProfile() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -87,9 +128,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---------------------------
-  // UI สำหรับ rider
-  // ---------------------------
   Widget _buildRiderProfile() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -117,13 +155,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---------------------------
-  // Widget รูปโปรไฟล์
-  // ---------------------------
   Widget _buildProfilePicture(String? url) {
     return SizedBox(
-      width: 100,
-      height: 100,
+      width: 200,
+      height: 200,
       child: Container(
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
@@ -132,7 +167,7 @@ class _ProfilePageState extends State<ProfilePage> {
           border: Border.all(color: Colors.orange.shade800, width: 2),
         ),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
+          borderRadius: BorderRadius.circular(100),
           child: url != null && url.isNotEmpty
               ? Image.network(
                   url,
@@ -140,14 +175,14 @@ class _ProfilePageState extends State<ProfilePage> {
                   errorBuilder: (context, _, __) {
                     return Icon(
                       Icons.account_circle,
-                      size: 100,
+                      size: 200,
                       color: Colors.grey.shade700,
                     );
                   },
                 )
               : Icon(
                   Icons.account_circle,
-                  size: 100,
+                  size: 200,
                   color: Colors.grey.shade700,
                 ),
         ),
@@ -155,9 +190,6 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  // ---------------------------
-  // Widget รูปรถ
-  // ---------------------------
   Widget _buildVehiclePicture(String? url) {
     return SizedBox(
       width: 120,
@@ -192,50 +224,5 @@ class _ProfilePageState extends State<ProfilePage> {
         );
       },
     );
-  }
-
-  Future<void> _loadAddresses() async {
-    try {
-      final loc1 = widget.userData['location1'];
-      final loc2 = widget.userData['location2'];
-
-      String? addr1;
-      String? addr2;
-
-      if (loc1 != null) {
-        try {
-          final placemarks1 = await placemarkFromCoordinates(
-            loc1['latitude'],
-            loc1['longitude'],
-          );
-          final place1 = placemarks1.first;
-          addr1 =
-              "${place1.street ?? ''}, ${place1.subLocality ?? ''}, ${place1.locality ?? ''}, ${place1.administrativeArea ?? ''}, ${place1.country ?? ''}";
-        } catch (_) {}
-      }
-
-      if (loc2 != null) {
-        try {
-          final placemarks2 = await placemarkFromCoordinates(
-            loc2['latitude'],
-            loc2['longitude'],
-          );
-          final place2 = placemarks2.first;
-          addr2 =
-              "${place2.street ?? ''}, ${place2.subLocality ?? ''}, ${place2.locality ?? ''}, ${place2.administrativeArea ?? ''}, ${place2.country ?? ''}";
-        } catch (_) {}
-      }
-
-      setState(() {
-        address1 = addr1;
-        address2 = addr2;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
-      debugPrint('Error loading address: $e');
-    }
   }
 }

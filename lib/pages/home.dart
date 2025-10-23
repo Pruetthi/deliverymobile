@@ -35,7 +35,7 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(height: 20),
                       // Logo
                       Image.asset(
-                        'assets/delivery_logo.png',
+                        'assets/images/delivery_logo.jpg',
                         height: 120,
                         errorBuilder: (context, error, stackTrace) {
                           return Column(
