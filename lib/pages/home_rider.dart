@@ -1,3 +1,4 @@
+import 'package:delivery/pages/job_detail.rider.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -19,25 +20,24 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
     setState(() => _selectedIndex = index);
   }
 
-  // 🔹 Stream ดึงงานทั้งหมดที่ status = 1 (รอจัดส่ง)
   Stream<List<QueryDocumentSnapshot>> fetchJobs() {
     return FirebaseFirestore.instance
         .collection('jobs')
-        .where(
-          'rider_uid',
-          isEqualTo: widget.riderData['uid'],
-        ) // งานของไรเดอร์คนนี้
+        .where('rider_uid', isEqualTo: widget.riderData['uid'])
         .snapshots()
         .map((snapshot) => snapshot.docs);
   }
 
-  // 🔹 รับงานแล้วเปิดแผนที่ทันที
-  Future<void> acceptJob(String jobId) async {
+  Future<void> acceptJob(String jobId, Map<String, dynamic> job) async {
     try {
       await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
         'status': 2,
         'rider_uid': widget.riderData['uid'],
         'rider_name': widget.riderData['name'],
+      });
+
+      setState(() {
+        job['status'] = 2;
       });
 
       ScaffoldMessenger.of(
@@ -48,57 +48,6 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
     }
-  }
-
-  Future<void> acceptJobAndOpenMap(
-    String jobId,
-    Map<String, dynamic> job,
-  ) async {
-    try {
-      // อัปเดตสถานะงาน
-      await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-        'status': 2,
-        'rider_uid': widget.riderData['uid'],
-        'rider_name': widget.riderData['name'],
-      });
-
-      // แจ้งเตือน
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('รับงานเรียบร้อย ✅')));
-
-      // เปิดหน้าแผนที่
-      openMap(
-        job['pickup_latitude'],
-        job['pickup_longitude'],
-        job['latitude'] ?? 16.2477, // fallback พิกัดจำลอง
-        job['longitude'] ?? 103.2532,
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
-    }
-  }
-
-  // 🔹 เปิดหน้าแผนที่ Thunderforest
-  void openMap(
-    double pickupLat,
-    double pickupLng,
-    double dropLat,
-    double dropLng,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => JobMapPage(
-          pickupLat: pickupLat,
-          pickupLng: pickupLng,
-          dropLat: dropLat,
-          dropLng: dropLng,
-        ),
-      ),
-    );
   }
 
   @override
@@ -110,118 +59,111 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 20),
-                      // โลโก้
-                      Center(
-                        child: Image.asset(
-                          'assets/delivery_logo.png',
-                          height: 100,
-                          errorBuilder: (_, __, ___) => Icon(
-                            Icons.delivery_dining,
-                            size: 70,
-                            color: Colors.orange.shade700,
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Image.asset(
+                        'assets/delivery_logo.png',
+                        height: 100,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.delivery_dining,
+                          size: 70,
+                          color: Colors.orange.shade700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFC857),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.orange.shade300.withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 30),
-
-                      // โปรไฟล์ไรเดอร์
-                      Container(
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFC857),
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.orange.shade300.withOpacity(0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 35,
-                              backgroundColor: Colors.white,
-                              backgroundImage:
-                                  widget.riderData['profile_picture'] != null &&
-                                      widget
-                                          .riderData['profile_picture']
-                                          .isNotEmpty
-                                  ? NetworkImage(
-                                      widget.riderData['profile_picture'],
-                                    )
-                                  : null,
-                              child: widget.riderData['profile_picture'] == null
-                                  ? const Icon(Icons.person, size: 50)
-                                  : null,
-                            ),
-                            const SizedBox(width: 16),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'ยินดีต้อนรับ',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF5C3D2E),
-                                  ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 35,
+                            backgroundColor: Colors.white,
+                            backgroundImage:
+                                widget.riderData['profile_picture'] != null &&
+                                    widget
+                                        .riderData['profile_picture']
+                                        .isNotEmpty
+                                ? NetworkImage(
+                                    widget.riderData['profile_picture'],
+                                  )
+                                : null,
+                            child: widget.riderData['profile_picture'] == null
+                                ? const Icon(Icons.person, size: 50)
+                                : null,
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'ยินดีต้อนรับ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF5C3D2E),
                                 ),
-                                Text(
-                                  'คุณ ${widget.riderData['name'] ?? 'ไรเดอร์'}',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    color: Colors.orange.shade900,
-                                  ),
+                              ),
+                              Text(
+                                'คุณ ${widget.riderData['name'] ?? 'ไรเดอร์'}',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.orange.shade900,
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 24),
-
-                      const Text(
-                        'งานจัดส่ง',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF5C3D2E),
-                        ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'งานจัดส่ง',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF5C3D2E),
                       ),
-                      const SizedBox(height: 12),
-
-                      StreamBuilder<List<QueryDocumentSnapshot>>(
-                        stream: fetchJobs(),
-                        builder: (context, snapshot) {
-                          if (!snapshot.hasData) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
-                          final jobs = snapshot.data!;
-                          if (jobs.isEmpty) {
-                            return const Text('ไม่มีงานจัดส่งในขณะนี้');
-                          }
-
-                          return Column(
-                            children: jobs.map((doc) {
-                              final job = doc.data() as Map<String, dynamic>;
-                              return _buildJobCard(job, doc.id);
-                            }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    StreamBuilder<List<QueryDocumentSnapshot>>(
+                      stream: fetchJobs(),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
                           );
-                        },
-                      ),
-                    ],
-                  ),
+                        }
+
+                        final jobs = snapshot.data!;
+                        if (jobs.isEmpty) {
+                          return const Text('ไม่มีงานจัดส่งในขณะนี้');
+                        }
+
+                        return Column(
+                          children: jobs.map((doc) {
+                            final job = doc.data() as Map<String, dynamic>;
+                            return _buildJobCard(job, doc.id);
+                          }).toList(),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -266,7 +208,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
             children: [
               if (!isAccepted)
                 ElevatedButton.icon(
-                  onPressed: () => acceptJobAndOpenMap(jobId, job),
+                  onPressed: () => acceptJob(jobId, job),
                   icon: const Icon(Icons.check_circle, size: 18),
                   label: const Text('รับงาน'),
                   style: ElevatedButton.styleFrom(
@@ -274,22 +216,27 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                     foregroundColor: Colors.orange.shade800,
                   ),
                 ),
-
-              const SizedBox(width: 8),
-              ElevatedButton.icon(
-                onPressed: () => openMap(
-                  job['pickup_latitude'],
-                  job['pickup_longitude'],
-                  job['latitude'] ?? 16.2477,
-                  job['longitude'] ?? 103.2532,
+              if (isAccepted)
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => JobDetailRiderPage(
+                          jobData: job,
+                          userData: widget.riderData,
+                          riderData: widget.riderData,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.info, size: 18),
+                  label: const Text('ดูรายละเอียด'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.orange.shade800,
+                  ),
                 ),
-                icon: const Icon(Icons.map, size: 18),
-                label: const Text('ดูแผนที่'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.orange.shade800,
-                ),
-              ),
             ],
           ),
         ],
@@ -298,12 +245,14 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
   }
 }
 
-// 🔹 หน้าดูแผนที่ (Thunderforest)
+// ------------------- JobMapPage -------------------
 class JobMapPage extends StatelessWidget {
   final double pickupLat;
   final double pickupLng;
   final double dropLat;
   final double dropLng;
+  final double? riderLat;
+  final double? riderLng;
 
   const JobMapPage({
     super.key,
@@ -311,70 +260,97 @@ class JobMapPage extends StatelessWidget {
     required this.pickupLng,
     required this.dropLat,
     required this.dropLng,
+    this.riderLat,
+    this.riderLng,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('แผนที่จัดส่ง'),
-        backgroundColor: Colors.orange,
+    final centerLat = (pickupLat + dropLat) / 2;
+    final centerLng = (pickupLng + dropLng) / 2;
+
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: LatLng(centerLat, centerLng),
+        initialZoom: 13,
       ),
-      body: FlutterMap(
-        options: MapOptions(
-          initialCenter: LatLng(pickupLat, pickupLng),
-          initialZoom: 13,
+      children: [
+        TileLayer(
+          urlTemplate:
+              'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
+          userAgentPackageName: 'com.example.delivery_app',
         ),
-        children: [
-          TileLayer(
-            urlTemplate:
-                'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
-            userAgentPackageName: 'com.example.delivery_app',
-          ),
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: LatLng(pickupLat, pickupLng),
-                width: 80,
-                height: 80,
-                child: const Icon(Icons.store, color: Colors.green, size: 40),
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: LatLng(pickupLat, pickupLng),
+              width: 80,
+              height: 80,
+              child: Column(
+                children: const [
+                  Icon(Icons.store, color: Colors.green, size: 40),
+                  Text(
+                    'ผู้ส่ง',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
-              // Marker(
-              //   point: LatLng(dropLat, dropLng),
-              //   width: 80,
-              //   height: 80,
-              //   child: const Icon(
-              //     Icons.location_on,
-              //     color: Colors.red,
-              //     size: 40,
-              //   ),
-              // ),
+            ),
+            Marker(
+              point: LatLng(dropLat, dropLng),
+              width: 80,
+              height: 80,
+              child: Column(
+                children: const [
+                  Icon(Icons.location_on, color: Colors.red, size: 40),
+                  Text(
+                    'ผู้รับ',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (riderLat != null && riderLng != null)
               Marker(
-                point: LatLng(16.2477, 103.2532), // พิกัดจำลองผู้รับ
+                point: LatLng(riderLat!, riderLng!),
                 width: 80,
                 height: 80,
-                child: const Icon(
-                  Icons.location_on,
-                  color: Colors.red,
-                  size: 40,
+                child: Column(
+                  children: const [
+                    Icon(Icons.directions_bike, color: Colors.blue, size: 40),
+                    Text(
+                      'ไรเดอร์',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: [
-                  LatLng(pickupLat, pickupLng),
-                  LatLng(dropLat, dropLng),
-                ],
-                color: Colors.orangeAccent,
-                strokeWidth: 4,
-              ),
-            ],
-          ),
-        ],
-      ),
+          ],
+        ),
+        PolylineLayer(
+          polylines: [
+            Polyline(
+              points: [
+                LatLng(pickupLat, pickupLng),
+                if (riderLat != null && riderLng != null)
+                  LatLng(riderLat!, riderLng!),
+                LatLng(dropLat, dropLng),
+              ],
+              color: Colors.orangeAccent,
+              strokeWidth: 4,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

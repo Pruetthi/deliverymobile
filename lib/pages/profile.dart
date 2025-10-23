@@ -1,5 +1,6 @@
 import 'package:delivery/pages/login.dart';
 import 'package:delivery/widgets/custom_bottom_bar.dart';
+import 'package:delivery/widgets/rider_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 
@@ -92,11 +93,17 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               ),
             ),
-      bottomNavigationBar: CustomBottomBar(
-        userData: widget.userData,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-      ),
+      bottomNavigationBar: widget.userData['status'] == 'user'
+          ? CustomBottomBar(
+              userData: widget.userData,
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+            )
+          : RiderBottomBar(
+              userData: widget.userData,
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+            ),
     );
   }
 
