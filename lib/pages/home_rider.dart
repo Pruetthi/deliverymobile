@@ -1,9 +1,13 @@
+import 'dart:developer';
+
 import 'package:delivery/pages/job_detail.rider.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../widgets/rider_bottom_bar.dart';
+import 'dart:async';
+import 'package:geolocator/geolocator.dart';
 
 class HomeRiderPage extends StatefulWidget {
   final Map<String, dynamic> riderData;
@@ -30,14 +34,24 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
 
   Future<void> acceptJob(String jobId, Map<String, dynamic> job) async {
     try {
+      final rider = widget.riderData;
+      log(rider.toString());
       await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-        'status': 2,
-        'rider_uid': widget.riderData['uid'],
-        'rider_name': widget.riderData['name'],
+        'status': 2, // 1=รอรับ, 2=ไรเดอร์รับงานแล้ว
+        'rider_uid': rider['rid'], // uid ของไรเดอร์
+        'rider_name': rider['name'], // ชื่อไรเดอร์
+        'rider_phone': rider['phone'], // เบอร์โทร
+        'rider_vehicle_number': rider['vehicle_number'], // ทะเบียนรถ
+        'rider_profile': rider['profile_picture'], // รูปโปรไฟล์
+        'accepted_at': FieldValue.serverTimestamp(), // เวลารับงาน
       });
+      RiderLocationUpdater().startUpdating(widget.riderData['rid']);
 
+      // อัปเดตสถานะใน local state
       setState(() {
         job['status'] = 2;
+        job['rider_uid'] = rider['uid'];
+        job['rider_name'] = rider['name'];
       });
 
       ScaffoldMessenger.of(
@@ -353,4 +367,30 @@ class JobMapPage extends StatelessWidget {
       ],
     );
   }
+}
+
+class RiderLocationUpdater {
+  StreamSubscription<Position>? _positionStream;
+
+  void startUpdating(String riderId) async {
+    await Geolocator.requestPermission();
+
+    _positionStream =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.best,
+          ),
+        ).listen((position) async {
+          await FirebaseFirestore.instance
+              .collection('riders')
+              .doc(riderId)
+              .set({
+                'lat': position.latitude,
+                'lng': position.longitude,
+                'updated_at': FieldValue.serverTimestamp(),
+              }, SetOptions(merge: true));
+        });
+  }
+
+  void stopUpdating() => _positionStream?.cancel();
 }
