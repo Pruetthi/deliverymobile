@@ -33,6 +33,8 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
   }
 
   Future<void> acceptJob(String jobId, Map<String, dynamic> job) async {
+    print("🚀 เริ่มอัปเดตตำแหน่งเรียลไทม์ของไรเดอร์แล้ว");
+
     try {
       final rider = widget.riderData;
       log(rider.toString());

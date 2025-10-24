@@ -18,24 +18,25 @@ class RidersMapPage extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('jobs')
             .where('receiver_uid', isEqualTo: receiverUid)
-            .where('status', isGreaterThanOrEqualTo: 1)
+            .where('status', whereIn: [2, 3]) // ✅ เฉพาะงานที่มีไรเดอร์แล้ว
             .snapshots(),
         builder: (context, snapshot) {
-          // 🔹 ถ้ายังโหลดอยู่
+          // กำลังโหลด
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // 🔹 ถ้าไม่มีข้อมูลเลย
+          // ไม่มีข้อมูล
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text("ยังไม่มีไรเดอร์กำลังมาส่งคุณ"));
+            return const Center(child: Text("ยังไม่มีไรเดอร์ที่กำลังมาส่งคุณ"));
           }
 
           final jobs = snapshot.data!.docs;
+          final List<Marker> markers = [];
+          final List<Polyline> polylines = [];
 
-          List<Marker> markers = [];
-          List<Polyline> polylines = [];
-          double sumLat = 0, sumLng = 0;
+          double sumLat = 0;
+          double sumLng = 0;
           int count = 0;
 
           for (var jobDoc in jobs) {
@@ -46,8 +47,12 @@ class RidersMapPage extends StatelessWidget {
             final dropLat = (job['latitude'] ?? 0).toDouble();
             final dropLng = (job['longitude'] ?? 0).toDouble();
 
-            // 🔸 ตรวจว่าค่าถูกต้องไหม (ไม่ใช่ 0,0)
-            if (riderLat != 0 && riderLng != 0) {
+            // ✅ ตรวจว่ามีพิกัดจริง
+            if (riderLat != 0 &&
+                riderLng != 0 &&
+                dropLat != 0 &&
+                dropLng != 0) {
+              // Marker ไรเดอร์
               markers.add(
                 Marker(
                   point: LatLng(riderLat, riderLng),
@@ -57,26 +62,38 @@ class RidersMapPage extends StatelessWidget {
                     message: job['rider_name'] ?? 'ไรเดอร์',
                     child: const Icon(
                       Icons.directions_bike,
-                      color: Colors.blue,
+                      color: Colors.blueAccent,
                       size: 45,
                     ),
                   ),
                 ),
               );
 
-              // เส้นจากไรเดอร์ไปจุดส่ง
-              if (dropLat != 0 && dropLng != 0) {
-                polylines.add(
-                  Polyline(
-                    points: [
-                      LatLng(riderLat, riderLng),
-                      LatLng(dropLat, dropLng),
-                    ],
-                    color: Colors.orange,
-                    strokeWidth: 3,
+              // Marker จุดปลายทาง
+              markers.add(
+                Marker(
+                  point: LatLng(dropLat, dropLng),
+                  width: 40,
+                  height: 40,
+                  child: const Icon(
+                    Icons.home,
+                    color: Colors.redAccent,
+                    size: 40,
                   ),
-                );
-              }
+                ),
+              );
+
+              // เส้นทางจากไรเดอร์ → ปลายทาง
+              polylines.add(
+                Polyline(
+                  points: [
+                    LatLng(riderLat, riderLng),
+                    LatLng(dropLat, dropLng),
+                  ],
+                  color: const Color.fromARGB(0, 255, 153, 0),
+                  strokeWidth: 4,
+                ),
+              );
 
               sumLat += riderLat;
               sumLng += riderLng;
@@ -84,16 +101,21 @@ class RidersMapPage extends StatelessWidget {
             }
           }
 
-          // 🔹 ถ้าไม่มี marker เลย ให้ขึ้นข้อความแทน
+          // ไม่มีพิกัดไรเดอร์เลย
           if (count == 0) {
-            return const Center(child: Text("ไม่พบตำแหน่งของไรเดอร์"));
+            return const Center(child: Text("ไม่พบตำแหน่งของไรเดอร์ในขณะนี้"));
           }
 
           final center = LatLng(sumLat / count, sumLng / count);
 
-          // 🔹 ใช้ FutureBuilder ป้องกัน Map โหลดก่อน center พร้อม
           return FlutterMap(
-            options: MapOptions(initialCenter: center, initialZoom: 14),
+            options: MapOptions(
+              initialCenter: center,
+              initialZoom: 14,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
+            ),
             children: [
               TileLayer(
                 urlTemplate:
@@ -101,7 +123,7 @@ class RidersMapPage extends StatelessWidget {
                 userAgentPackageName: 'com.example.delivery_app',
               ),
               MarkerLayer(markers: markers),
-              if (polylines.isNotEmpty) PolylineLayer(polylines: polylines),
+              PolylineLayer(polylines: polylines),
             ],
           );
         },

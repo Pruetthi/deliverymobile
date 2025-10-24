@@ -102,7 +102,7 @@ class JobTrackingPage extends StatelessWidget {
                         LatLng(riderLat, riderLng),
                       LatLng(dropLat, dropLng),
                     ],
-                    color: Colors.orangeAccent,
+                    color: const Color.fromARGB(0, 255, 172, 64),
                     strokeWidth: 4,
                   ),
                 ],
