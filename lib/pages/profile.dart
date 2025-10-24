@@ -194,8 +194,8 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildVehiclePicture(String? url) {
     return SizedBox(
-      width: 120,
-      height: 80,
+      width: 300,
+      height: 150,
       child: Container(
         decoration: BoxDecoration(
           color: Colors.grey.shade300,

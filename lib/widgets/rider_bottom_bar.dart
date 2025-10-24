@@ -18,7 +18,7 @@ class RiderBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFF6B35),
+        color: const Color.fromARGB(255, 255, 167, 35),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withOpacity(0.3),
