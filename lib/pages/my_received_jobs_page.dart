@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:delivery/pages/job_tracking_page.dart';
 import 'package:flutter/material.dart';
 
 class MyReceivedJobsPage extends StatefulWidget {
@@ -167,6 +168,34 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      // ปุ่มดูแผนที่
+                      const SizedBox(height: 10),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    JobTrackingPage(jobId: jobs[index].id),
+                              ),
+                            );
+                          },
+
+                          icon: const Icon(Icons.map, color: Colors.white),
+                          label: const Text(
+                            "ดูแผนที่",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B35),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                         ),
                       ),

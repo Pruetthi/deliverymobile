@@ -372,26 +372,46 @@ class JobMapPage extends StatelessWidget {
 class RiderLocationUpdater {
   StreamSubscription<Position>? _positionStream;
 
-  void startUpdating(String jobId) async {
-    await Geolocator.requestPermission();
+  Future<void> startUpdating(String jobId) async {
+    // ขออนุญาตเข้าถึง location ก่อน
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.deniedForever ||
+        permission == LocationPermission.denied) {
+      print("❌ ไม่มีสิทธิ์เข้าถึงตำแหน่ง");
+      return;
+    }
 
+    // เริ่มอัปเดตตำแหน่งเรียลไทม์
     _positionStream =
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.best,
+            accuracy: LocationAccuracy.bestForNavigation,
             distanceFilter: 5, // อัปเดตเมื่อเคลื่อนที่เกิน 5 เมตร
           ),
         ).listen((position) async {
-          await FirebaseFirestore.instance
-              .collection('jobs')
-              .doc(jobId)
-              .update({
-                'rider_lat': position.latitude,
-                'rider_lng': position.longitude,
-                'rider_updated_at': FieldValue.serverTimestamp(),
-              });
+          try {
+            await FirebaseFirestore.instance
+                .collection('jobs')
+                .doc(jobId)
+                .update({
+                  'rider_lat': position.latitude,
+                  'rider_lng': position.longitude,
+                  'rider_updated_at': FieldValue.serverTimestamp(),
+                });
+            print(
+              "📍 อัปเดตตำแหน่ง: ${position.latitude}, ${position.longitude}",
+            );
+          } catch (e) {
+            print("⚠️ อัปเดตตำแหน่งล้มเหลว: $e");
+          }
         });
   }
 
-  void stopUpdating() => _positionStream?.cancel();
+  void stopUpdating() {
+    _positionStream?.cancel();
+    print("🛑 หยุดอัปเดตตำแหน่งแล้ว");
+  }
 }
