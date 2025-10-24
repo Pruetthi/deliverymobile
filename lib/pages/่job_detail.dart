@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class JobDetailPage extends StatefulWidget {
   final Map<String, dynamic> jobData;
@@ -114,6 +115,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       ],
                     ),
                   ),
+                  // Marker ผู้รับ (สีแดง)
                   Marker(
                     point: LatLng(dropLat, dropLng),
                     width: 80,
@@ -133,7 +135,6 @@ class _JobDetailPageState extends State<JobDetailPage> {
                   ),
                 ],
               ),
-
               PolylineLayer(
                 polylines: [
                   Polyline(
@@ -150,6 +151,64 @@ class _JobDetailPageState extends State<JobDetailPage> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildItemImage() {
+    final int status = widget.jobData['status'] ?? 0;
+
+    // ถ้า status < 3 ใช้รูปสินค้าปกติ
+    if (status < 3) {
+      return Image.network(
+        widget.jobData['item_image'] ?? '',
+        height: 200,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+
+    // status >=3 ใช้ StreamBuilder เอารูป pickup ล่าสุดจาก Firestore
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('images')
+          .where('job_id', isEqualTo: widget.jobData['id']) // job_id ต้องตรง
+          .where('image_type', isEqualTo: 'pickup') // filter pickup
+          .orderBy('timestamp', descending: true)
+          .limit(1)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const SizedBox(
+            height: 200,
+            child: Center(child: Text('เกิดข้อผิดพลาดในการโหลดรูป')),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const SizedBox(
+            height: 200,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final docs = snapshot.data!.docs;
+        if (docs.isEmpty) {
+          // ถ้ายังไม่มีรูป pickup
+          return Image.network(
+            widget.jobData['item_image'] ?? '',
+            height: 200,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          );
+        }
+
+        final imageUrl = docs.first.get('image_url');
+        return Image.network(
+          imageUrl,
+          height: 200,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        );
+      },
     );
   }
 
@@ -243,12 +302,9 @@ class _JobDetailPageState extends State<JobDetailPage> {
                     ),
                   ),
 
-                  Image.network(
-                    widget.jobData['item_image'] ?? '',
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
+                  // รูปสินค้า / รูปล่าสุด Rider ถ่าย
+                  _buildItemImage(),
+
                   const SizedBox(height: 10),
                   ElevatedButton.icon(
                     onPressed: _openMapPage,
