@@ -1,5 +1,6 @@
 import 'dart:developer';
 import 'package:delivery/pages/job_detail.rider.dart';
+import 'package:delivery/pages/job_tracking_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -47,32 +48,50 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
   Future<void> acceptJob(String jobId, Map<String, dynamic> job) async {
     try {
       final rider = widget.riderData;
+      final riderId = rider['rid'];
+
+      // 🔹 ตรวจสอบว่ามีงานที่ status != 4 อยู่หรือไม่
+      final existingJobs = await FirebaseFirestore.instance
+          .collection('jobs')
+          .where('rider_uid', isEqualTo: riderId)
+          .where('status', whereIn: [2, 3]) // งานที่กำลังทำอยู่
+          .get();
+
+      if (existingJobs.docs.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('คุณมีงานที่ยังไม่เสร็จ กรุณาส่งงานก่อนรับงานใหม่ ❌'),
+          ),
+        );
+        return;
+      }
 
       // 🔹 ดึงตำแหน่งปัจจุบัน
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.bestForNavigation,
       );
 
+      // 🔹 อัปเดต Firestore
       await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
         'status': 2,
-        'rider_uid': rider['rid'], // ใช้ rid
+        'rider_uid': riderId,
         'rider_name': rider['name'],
         'rider_phone': rider['phone'],
         'rider_vehicle_number': rider['vehicle_number'],
         'rider_profile': rider['profile_picture'],
         'accepted_at': FieldValue.serverTimestamp(),
-        'rider_lat': position.latitude, // เพิ่มตำแหน่งตอนรับงาน
-        'rider_lng': position.longitude, // เพิ่มตำแหน่งตอนรับงาน
+        'rider_lat': position.latitude,
+        'rider_lng': position.longitude,
         'rider_updated_at': FieldValue.serverTimestamp(),
       });
 
-      // 🔹 เริ่มอัปเดตตำแหน่งแบบเรียลไทม์ต่อ
+      // 🔹 เริ่มอัปเดตตำแหน่งแบบเรียลไทม์
       RiderLocationUpdater().startUpdating(jobId);
 
       setState(() {
         job['status'] = 2;
-        job['rider_uid'] = rider['rid'];
-        job['rider_lat'] = position.latitude; // เก็บใน local job map ด้วย
+        job['rider_uid'] = riderId;
+        job['rider_lat'] = position.latitude;
         job['rider_lng'] = position.longitude;
       });
 
@@ -269,15 +288,37 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
           Row(
             children: [
               if (showAvailableJobs && job['status'] == 1)
-                ElevatedButton.icon(
-                  onPressed: () => acceptJob(jobId, job),
-                  icon: const Icon(Icons.check_circle, size: 18),
-                  label: const Text('รับงาน'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.orange.shade800,
-                  ),
+                Row(
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => acceptJob(jobId, job),
+                      icon: const Icon(Icons.check_circle, size: 18),
+                      label: const Text('รับงาน'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.orange.shade800,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => JobTrackingPage(jobId: jobId),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map, size: 18),
+                      label: const Text('ดูตำแหน่งสินค้า'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue.shade700,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
+
               if (!showAvailableJobs)
                 ElevatedButton.icon(
                   onPressed: () {
