@@ -45,7 +45,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
         'rider_profile': rider['profile_picture'], // รูปโปรไฟล์
         'accepted_at': FieldValue.serverTimestamp(), // เวลารับงาน
       });
-      RiderLocationUpdater().startUpdating(widget.riderData['rid']);
+      RiderLocationUpdater().startUpdating(jobId);
 
       // อัปเดตสถานะใน local state
       setState(() {
@@ -372,23 +372,24 @@ class JobMapPage extends StatelessWidget {
 class RiderLocationUpdater {
   StreamSubscription<Position>? _positionStream;
 
-  void startUpdating(String riderId) async {
+  void startUpdating(String jobId) async {
     await Geolocator.requestPermission();
 
     _positionStream =
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.best,
+            distanceFilter: 5, // อัปเดตเมื่อเคลื่อนที่เกิน 5 เมตร
           ),
         ).listen((position) async {
           await FirebaseFirestore.instance
-              .collection('riders')
-              .doc(riderId)
-              .set({
-                'lat': position.latitude,
-                'lng': position.longitude,
-                'updated_at': FieldValue.serverTimestamp(),
-              }, SetOptions(merge: true));
+              .collection('jobs')
+              .doc(jobId)
+              .update({
+                'rider_lat': position.latitude,
+                'rider_lng': position.longitude,
+                'rider_updated_at': FieldValue.serverTimestamp(),
+              });
         });
   }
 
