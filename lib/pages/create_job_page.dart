@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:geolocator/geolocator.dart';
@@ -274,32 +275,43 @@ class _CreateJobPageState extends State<CreateJobPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("สร้างงานส่งสินค้า"),
-        backgroundColor: const Color(0xFFFF6B35),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: _showReceiverList,
-            tooltip: 'เลือกรายชื่อผู้รับ',
-          ),
-        ],
-      ),
       backgroundColor: const Color(0xFFFFF8F0),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            TextField(
-              controller: phoneController,
-              decoration: InputDecoration(
-                labelText: "ค้นหาด้วยเบอร์โทรผู้รับ",
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.search),
-                  onPressed: searchReceiver,
+            Row(
+              children: [
+                // ช่องกรอกเบอร์โทรผู้รับ
+                Expanded(
+                  child: TextField(
+                    controller: phoneController,
+                    decoration: InputDecoration(
+                      labelText: "ค้นหาด้วยเบอร์โทรผู้รับ",
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.search),
+                        onPressed: searchReceiver,
+                      ),
+                    ),
+                    keyboardType: TextInputType.phone,
+                  ),
                 ),
-              ),
-              keyboardType: TextInputType.phone,
+                const SizedBox(width: 10),
+                // ปุ่มดูรายชื่อผู้รับ
+                ElevatedButton.icon(
+                  onPressed: _showReceiverList,
+                  icon: const Icon(Icons.list),
+                  label: const Text("รายชื่อ"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6B35),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -373,13 +385,41 @@ class _CreateJobPageState extends State<CreateJobPage> {
             ),
             const SizedBox(height: 20),
 
-            if (_pickedImage != null) Image.file(_pickedImage!, height: 150),
+            if (_pickedImage != null)
+              Center(
+                child: Container(
+                  height: 400,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12), // ขอบโค้งมน
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1), // เงาเบา ๆ
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias, // ตัดส่วนที่ล้นขอบ
+                  child: Image.file(
+                    _pickedImage!,
+                    fit: BoxFit.cover, // ให้รูปเต็มพื้นที่
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
             ElevatedButton.icon(
               onPressed: pickImage,
               icon: const Icon(Icons.camera_alt),
-              label: const Text("ถ่ายรูปสินค้า"),
+              label: const Text(
+                "ถ่ายรูปสินค้า",
+                style: TextStyle(fontSize: 16),
+              ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B35),
+                backgroundColor: const Color(0xFFFAB12F),
+                minimumSize: const Size(double.infinity, 50),
+                foregroundColor: Colors.white,
               ),
             ),
             const SizedBox(height: 20),
@@ -391,6 +431,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF6B35),
                 minimumSize: const Size(double.infinity, 50),
+                foregroundColor: Colors.white,
               ),
             ),
           ],

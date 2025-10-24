@@ -258,11 +258,21 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.orange.shade50,
-      appBar: AppBar(title: const Text("Register")),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Image.asset(
+                  'assets/images/logo.jpg',
+                  height: 120,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
             _buildTextField("Name", nameCtl),
             _buildTextField(
               "Phone",
@@ -410,7 +420,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 p.locality,
                 p.administrativeArea,
                 p.country,
-              ].where((e) => e != null && e!.isNotEmpty).join(", ");
+              ].where((e) => e != null && e.isNotEmpty).join(", ");
 
               setState(() {
                 onSelect(selected);
