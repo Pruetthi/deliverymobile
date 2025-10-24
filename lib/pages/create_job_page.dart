@@ -2,11 +2,13 @@ import 'dart:io';
 import 'package:delivery/widgets/custom_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:latlong2/latlong.dart';
 
 class CreateJobPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -378,6 +380,57 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   });
                 },
               ),
+
+              // ------------------- แผนที่ -------------------
+              if (selectedAddress != null)
+                Container(
+                  height: 200,
+                  margin: const EdgeInsets.symmetric(vertical: 10),
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: LatLng(
+                        selectedAddress!['latitude'],
+                        selectedAddress!['longitude'],
+                      ),
+                      initialZoom: 15,
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
+                        userAgentPackageName: 'com.example.delivery_app',
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: LatLng(
+                              selectedAddress!['latitude'],
+                              selectedAddress!['longitude'],
+                            ),
+                            width: 80,
+                            height: 80,
+                            child: Column(
+                              children: const [
+                                Icon(
+                                  Icons.location_on,
+                                  color: Colors.red,
+                                  size: 40,
+                                ),
+                                Text(
+                                  'ตำแหน่งผู้รับ',
+                                  style: TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
             ],
 
             const Divider(),
