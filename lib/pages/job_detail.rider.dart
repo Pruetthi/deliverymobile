@@ -192,29 +192,26 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
     if (_photo == null) return;
 
     try {
+      // อัปโหลดไป Cloudinary
       CloudinaryResponse response = await cloudinary.uploadFile(
         CloudinaryFile.fromFile(_photo!.path, folder: 'delivery_photos'),
       );
 
       final imageUrl = response.secureUrl;
 
-      // เก็บรูป
-      await FirebaseFirestore.instance.collection('images').add({
-        'job_id': widget.jobId,
-        'rider_id': widget.riderData['rid'],
-        'image_type': 'pickup',
-        'image_url': imageUrl,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // อัปเดต status
+      // อัปเดต jobs โดยตรง
       await FirebaseFirestore.instance
           .collection('jobs')
           .doc(widget.jobId)
-          .update({'status': 3});
+          .update({
+            'item_image': imageUrl,
+            'status': 3,
+            'rider_updated_at': FieldValue.serverTimestamp(),
+          });
 
       setState(() {
         widget.jobData['status'] = 3;
+        widget.jobData['item_image'] = imageUrl;
         _displayImage = imageUrl;
       });
 
@@ -238,21 +235,19 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
 
       final imageUrl = response.secureUrl;
 
-      await FirebaseFirestore.instance.collection('images').add({
-        'job_id': widget.jobId,
-        'rider_id': widget.riderData['rid'],
-        'image_type': 'delivery',
-        'image_url': imageUrl,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
+      // อัปเดต jobs โดยตรง
       await FirebaseFirestore.instance
           .collection('jobs')
           .doc(widget.jobId)
-          .update({'status': 4});
+          .update({
+            'item_image': imageUrl,
+            'status': 4,
+            'rider_updated_at': FieldValue.serverTimestamp(),
+          });
 
       setState(() {
         widget.jobData['status'] = 4;
+        widget.jobData['item_image'] = imageUrl;
         _displayImage = imageUrl;
       });
 

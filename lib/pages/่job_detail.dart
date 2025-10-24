@@ -157,56 +157,63 @@ class _JobDetailPageState extends State<JobDetailPage> {
   Widget _buildItemImage() {
     final int status = widget.jobData['status'] ?? 0;
 
-    // ถ้า status < 3 ใช้รูปสินค้าปกติ
+    // ถ้า status < 3 ใช้ item_image เดิม
     if (status < 3) {
       return Image.network(
         widget.jobData['item_image'] ?? '',
         height: 200,
         width: double.infinity,
         fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          height: 200,
+          color: Colors.grey[300],
+          child: const Center(child: Icon(Icons.image)),
+        ),
       );
     }
 
-    // status >=3 ใช้ StreamBuilder เอารูป pickup ล่าสุดจาก Firestore
+    // status >= 3 ใช้รูป pickup ล่าสุดจาก images
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('images')
-          .where('job_id', isEqualTo: widget.jobData['id']) // job_id ต้องตรง
-          .where('image_type', isEqualTo: 'pickup') // filter pickup
+          .where('job_id', isEqualTo: widget.jobData['id'])
+          .where('image_type', isEqualTo: 'pickup')
           .orderBy('timestamp', descending: true)
           .limit(1)
           .snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const SizedBox(
-            height: 200,
-            child: Center(child: Text('เกิดข้อผิดพลาดในการโหลดรูป')),
-          );
-        }
-        if (!snapshot.hasData) {
-          return const SizedBox(
-            height: 200,
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        final docs = snapshot.data!.docs;
-        if (docs.isEmpty) {
-          // ถ้ายังไม่มีรูป pickup
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          // ถ้าไม่มีรูปใหม่ ให้ใช้ item_image เดิม
           return Image.network(
             widget.jobData['item_image'] ?? '',
             height: 200,
             width: double.infinity,
             fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 200,
+              color: Colors.grey[300],
+              child: const Center(child: Icon(Icons.image)),
+            ),
           );
         }
 
-        final imageUrl = docs.first.get('image_url');
+        // ถ้าเจอรูปใหม่
+        final doc = snapshot.data!.docs.first;
+        final imageUrl = doc.get('image_url') as String?;
+        final timestamp = doc.get('timestamp') as Timestamp?;
+
+        // ใช้ ValueKey + timestamp เพื่อบังคับ Flutter rebuild รูปเมื่อเปลี่ยน
         return Image.network(
-          imageUrl,
+          imageUrl ?? widget.jobData['item_image'] ?? '',
+          key: ValueKey("${imageUrl}_${timestamp?.millisecondsSinceEpoch}"),
           height: 200,
           width: double.infinity,
           fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Container(
+            height: 200,
+            color: Colors.grey[300],
+            child: const Center(child: Icon(Icons.broken_image)),
+          ),
         );
       },
     );
