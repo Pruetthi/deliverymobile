@@ -64,6 +64,7 @@ class JobTrackingPage extends StatelessWidget {
                     point: LatLng(pickupLat, pickupLng),
                     width: 40,
                     height: 40,
+
                     child: const Icon(
                       Icons.store,
                       color: Colors.green,
@@ -75,7 +76,11 @@ class JobTrackingPage extends StatelessWidget {
                     point: LatLng(dropLat, dropLng),
                     width: 40,
                     height: 40,
-                    child: const Icon(Icons.home, color: Colors.red, size: 40),
+                    child: const Icon(
+                      Icons.location_on,
+                      color: Colors.red,
+                      size: 40,
+                    ),
                   ),
                   // จุดไรเดอร์
                   if (riderLat != 0 && riderLng != 0)

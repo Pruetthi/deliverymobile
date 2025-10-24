@@ -18,15 +18,13 @@ class RidersMapPage extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('jobs')
             .where('receiver_uid', isEqualTo: receiverUid)
-            .where('status', whereIn: [2, 3]) // ✅ เฉพาะงานที่มีไรเดอร์แล้ว
+            .where('status', whereIn: [2, 3]) // เฉพาะงานที่มีไรเดอร์แล้ว
             .snapshots(),
         builder: (context, snapshot) {
-          // กำลังโหลด
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // ไม่มีข้อมูล
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("ยังไม่มีไรเดอร์ที่กำลังมาส่งคุณ"));
           }
@@ -46,8 +44,13 @@ class RidersMapPage extends StatelessWidget {
             final riderLng = (job['rider_lng'] ?? 0).toDouble();
             final dropLat = (job['latitude'] ?? 0).toDouble();
             final dropLng = (job['longitude'] ?? 0).toDouble();
+            final altLat = (job['alt_latitude'] ?? 0).toDouble();
+            final altLng = (job['alt_longitude'] ?? 0).toDouble();
+
             final riderUid = job['rider_uid'] ?? '';
             Color riderColor;
+
+            // กำหนดสีแตกต่างตาม rider
             switch (riderUid) {
               case 'rider1':
                 riderColor = Colors.blue;
@@ -59,11 +62,7 @@ class RidersMapPage extends StatelessWidget {
                 riderColor = Colors.orange;
             }
 
-            // ✅ ตรวจว่ามีพิกัดจริง
-            if (riderLat != 0 &&
-                riderLng != 0 &&
-                dropLat != 0 &&
-                dropLng != 0) {
+            if (riderLat != 0 && riderLng != 0) {
               // Marker ไรเดอร์
               markers.add(
                 Marker(
@@ -74,38 +73,68 @@ class RidersMapPage extends StatelessWidget {
                     message: job['rider_name'] ?? 'ไรเดอร์',
                     child: Icon(
                       Icons.directions_bike,
-                      color: riderColor, // ใช้สีตามตัวเลือกข้างบน
+                      color: riderColor,
                       size: 45,
                     ),
                   ),
                 ),
               );
 
-              // Marker จุดปลายทาง
-              markers.add(
-                Marker(
-                  point: LatLng(dropLat, dropLng),
-                  width: 40,
-                  height: 40,
-                  child: const Icon(
-                    Icons.home,
-                    color: Colors.redAccent,
-                    size: 40,
+              // Marker จุดส่งหลัก
+              if (dropLat != 0 && dropLng != 0) {
+                markers.add(
+                  Marker(
+                    point: LatLng(dropLat, dropLng),
+                    width: 40,
+                    height: 40,
+                    child: const Icon(
+                      Icons.home,
+                      color: Colors.redAccent,
+                      size: 40,
+                    ),
                   ),
-                ),
-              );
+                );
 
-              // เส้นทางจากไรเดอร์ → ปลายทาง
-              polylines.add(
-                Polyline(
-                  points: [
-                    LatLng(riderLat, riderLng),
-                    LatLng(dropLat, dropLng),
-                  ],
-                  color: const Color.fromARGB(0, 255, 153, 0),
-                  strokeWidth: 4,
-                ),
-              );
+                // เส้นทาง Rider → จุดส่งหลัก
+                polylines.add(
+                  Polyline(
+                    points: [
+                      LatLng(riderLat, riderLng),
+                      LatLng(dropLat, dropLng),
+                    ],
+                    color: Colors.orange,
+                    strokeWidth: 4,
+                  ),
+                );
+              }
+
+              // Marker จุดส่งสำรอง
+              if (altLat != 0 && altLng != 0) {
+                markers.add(
+                  Marker(
+                    point: LatLng(altLat, altLng),
+                    width: 40,
+                    height: 40,
+                    child: const Icon(
+                      Icons.home_outlined,
+                      color: Colors.purple,
+                      size: 40,
+                    ),
+                  ),
+                );
+
+                // เส้นทาง Rider → จุดส่งสำรอง
+                polylines.add(
+                  Polyline(
+                    points: [
+                      LatLng(riderLat, riderLng),
+                      LatLng(altLat, altLng),
+                    ],
+                    color: Colors.purpleAccent,
+                    strokeWidth: 3,
+                  ),
+                );
+              }
 
               sumLat += riderLat;
               sumLng += riderLng;
@@ -113,7 +142,6 @@ class RidersMapPage extends StatelessWidget {
             }
           }
 
-          // ไม่มีพิกัดไรเดอร์เลย
           if (count == 0) {
             return const Center(child: Text("ไม่พบตำแหน่งของไรเดอร์ในขณะนี้"));
           }
