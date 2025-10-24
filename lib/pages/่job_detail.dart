@@ -22,11 +22,13 @@ class JobDetailPage extends StatefulWidget {
 class _JobDetailPageState extends State<JobDetailPage> {
   int _selectedIndex = 0;
   String _receiverAddress = "-";
+  String _senderAddress = "-";
 
   @override
   void initState() {
     super.initState();
     _loadAddress();
+    _loadSenderAddress();
   }
 
   void _onItemTapped(int index) {
@@ -48,6 +50,26 @@ class _JobDetailPageState extends State<JobDetailPage> {
     }
   }
 
+  Future<void> _loadSenderAddress() async {
+    try {
+      final lat = widget.jobData['pickup_latitude'] as double?;
+      final lng = widget.jobData['pickup_longitude'] as double?;
+      if (lat != null && lng != null) {
+        List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          setState(() {
+            _senderAddress =
+                "${p.street ?? ''} ${p.thoroughfare ?? ''} ${p.subLocality ?? ''} ${p.locality ?? ''} ${p.administrativeArea ?? ''}"
+                    .trim();
+          });
+        }
+      }
+    } catch (e) {
+      setState(() => _senderAddress = "-");
+    }
+  }
+
   Future<void> _loadAddress() async {
     try {
       final lat = widget.jobData['latitude'] as double?;
@@ -58,7 +80,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
           final p = placemarks.first;
           setState(() {
             _receiverAddress =
-                "${p.thoroughfare ?? ''} ${p.subLocality ?? ''} ${p.locality ?? ''} ${p.administrativeArea ?? ''}"
+                "${p.street ?? ''} ${p.thoroughfare ?? ''} ${p.subLocality ?? ''} ${p.locality ?? ''} ${p.administrativeArea ?? ''}"
                     .trim();
           });
         }
@@ -225,123 +247,141 @@ class _JobDetailPageState extends State<JobDetailPage> {
     final int status = widget.jobData['status'] ?? 0;
 
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              color: const Color(0xFFFFC857),
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'รหัสสินค้า: ${widget.jobData['id']}',
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                color: const Color(0xFFFFC857),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'รหัสสินค้า: ${widget.jobData['id']}',
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInfoRow(
-                      Icons.inventory_2,
-                      'ชื่อสินค้า: ${widget.jobData['item_name']}',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInfoRow(
-                      Icons.description,
-                      'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInfoRow(
-                      Icons.person,
-                      'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInfoRow(
-                      Icons.person_outline,
-                      'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
-                    ),
-                    const SizedBox(height: 10),
-                    _buildInfoRow(
-                      Icons.home,
-                      'ที่อยู่ผู้รับ: $_receiverAddress',
-                    ),
-                    const SizedBox(height: 10),
-                    Divider(color: Colors.white, thickness: 1, height: 20),
-                    Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade700,
-                              shape: BoxShape.circle,
-                            ),
-                            alignment: Alignment.center,
-                            child: Text(
-                              status.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.inventory_2,
+                        'ชื่อสินค้า: ${widget.jobData['item_name']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.description,
+                        'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.person,
+                        'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.phone,
+                        'เบอร์ผู้ส่ง: ${widget.jobData['sender_phone']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.home,
+                        'ที่อยู่ผู้ส่ง: $_senderAddress',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.person_outline,
+                        'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.phone,
+                        'เบอร์ผู้รับ: ${widget.jobData['receiver_phone']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.home,
+                        'ที่อยู่ผู้รับ: $_receiverAddress',
+                      ),
+                      const SizedBox(height: 10),
+                      Divider(color: Colors.white, thickness: 1, height: 20),
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade700,
+                                shape: BoxShape.circle,
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                status.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              _getStatusText(status),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Colors.white,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _getStatusText(status),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
 
-                    // รูปสินค้า / รูปล่าสุด Rider ถ่าย
-                    _buildItemImage(),
+                      // รูปสินค้า / รูปล่าสุด Rider ถ่าย
+                      _buildItemImage(),
 
-                    const SizedBox(height: 10),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => JobTrackingPage(
-                              jobId:
-                                  widget.jobData['id'], // <-- ส่ง jobId ที่นี่
+                      const SizedBox(height: 10),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => JobTrackingPage(
+                                jobId: widget
+                                    .jobData['id'], // <-- ส่ง jobId ที่นี่
+                              ),
                             ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.map),
-                      label: const Text("ดูตำแหน่งสินค้า"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade700,
-                        minimumSize: const Size(double.infinity, 50),
-                        foregroundColor: Colors.white,
+                          );
+                        },
+                        icon: const Icon(Icons.map),
+                        label: const Text("ดูตำแหน่งสินค้า"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade700,
+                          minimumSize: const Size(double.infinity, 50),
+                          foregroundColor: Colors.white,
+                        ),
                       ),
-                    ),
 
-                    const SizedBox(height: 20),
-                  ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: CustomBottomBar(
@@ -358,7 +398,12 @@ class _JobDetailPageState extends State<JobDetailPage> {
       children: [
         Icon(icon, color: Colors.orange.shade700),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 18))),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 18, color: Colors.white),
+          ),
+        ),
       ],
     );
   }
