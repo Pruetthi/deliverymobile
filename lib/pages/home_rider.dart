@@ -1,5 +1,4 @@
 import 'dart:developer';
-
 import 'package:delivery/pages/job_detail.rider.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,41 +18,50 @@ class HomeRiderPage extends StatefulWidget {
 
 class _HomeRiderPageState extends State<HomeRiderPage> {
   int _selectedIndex = 0;
+  bool showAvailableJobs = true; // ✅ ตัวแปรสลับดู "งานว่าง" / "งานของฉัน"
 
   void _onItemTapped(int index) {
     setState(() => _selectedIndex = index);
   }
 
+  /// ✅ ดึงข้อมูลจาก Firestore ตามโหมดที่เลือก
   Stream<List<QueryDocumentSnapshot>> fetchJobs() {
-    return FirebaseFirestore.instance
-        .collection('jobs')
-        .where('rider_uid', isEqualTo: widget.riderData['uid'])
-        .snapshots()
-        .map((snapshot) => snapshot.docs);
+    final ref = FirebaseFirestore.instance.collection('jobs');
+    log('uid: ${widget.riderData['rid']}');
+    if (showAvailableJobs) {
+      // งานว่าง = status = 1 และยังไม่มี rider
+      return ref
+          .where('status', isEqualTo: 1)
+          .snapshots()
+          .map((snapshot) => snapshot.docs);
+    } else {
+      // งานของไรเดอร์คนนี้ = status >=2 และ rider_uid == uid ของเรา
+      return ref
+          .where('status', whereIn: [2, 3, 4])
+          .where('rider_uid', isEqualTo: widget.riderData['rid'])
+          .snapshots()
+          .map((snapshot) => snapshot.docs);
+    }
   }
 
   Future<void> acceptJob(String jobId, Map<String, dynamic> job) async {
-    print("🚀 เริ่มอัปเดตตำแหน่งเรียลไทม์ของไรเดอร์แล้ว");
-
     try {
       final rider = widget.riderData;
-      log(rider.toString());
       await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
-        'status': 2, // 1=รอรับ, 2=ไรเดอร์รับงานแล้ว
-        'rider_uid': rider['rid'], // uid ของไรเดอร์
-        'rider_name': rider['name'], // ชื่อไรเดอร์
-        'rider_phone': rider['phone'], // เบอร์โทร
-        'rider_vehicle_number': rider['vehicle_number'], // ทะเบียนรถ
-        'rider_profile': rider['profile_picture'], // รูปโปรไฟล์
-        'accepted_at': FieldValue.serverTimestamp(), // เวลารับงาน
+        'status': 2,
+        'rider_uid': rider['rid'], // ✅ แก้ตรงนี้
+        'rider_name': rider['name'],
+        'rider_phone': rider['phone'],
+        'rider_vehicle_number': rider['vehicle_number'],
+        'rider_profile': rider['profile_picture'],
+        'accepted_at': FieldValue.serverTimestamp(),
       });
+
       RiderLocationUpdater().startUpdating(jobId);
 
-      // อัปเดตสถานะใน local state
       setState(() {
         job['status'] = 2;
-        job['rider_uid'] = rider['uid'];
-        job['rider_name'] = rider['name'];
+        job['rider_uid'] = rider['rid'];
       });
 
       ScaffoldMessenger.of(
@@ -92,71 +100,38 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                       ),
                     ),
                     const SizedBox(height: 30),
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFC857),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.orange.shade300.withOpacity(0.3),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 35,
-                            backgroundColor: Colors.white,
-                            backgroundImage:
-                                widget.riderData['profile_picture'] != null &&
-                                    widget
-                                        .riderData['profile_picture']
-                                        .isNotEmpty
-                                ? NetworkImage(
-                                    widget.riderData['profile_picture'],
-                                  )
-                                : null,
-                            child: widget.riderData['profile_picture'] == null
-                                ? const Icon(Icons.person, size: 50)
-                                : null,
-                          ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'ยินดีต้อนรับ',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF5C3D2E),
-                                ),
-                              ),
-                              Text(
-                                'คุณ ${widget.riderData['name'] ?? 'ไรเดอร์'}',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.orange.shade900,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                    _buildRiderInfoCard(),
                     const SizedBox(height: 24),
-                    const Text(
-                      'งานจัดส่ง',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF5C3D2E),
-                      ),
+
+                    // ✅ ปุ่มสลับโหมด
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'รายการงานจัดส่ง',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF5C3D2E),
+                          ),
+                        ),
+                        Switch(
+                          value: showAvailableJobs,
+                          activeColor: Colors.orange,
+                          onChanged: (v) =>
+                              setState(() => showAvailableJobs = v),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      showAvailableJobs
+                          ? 'แสดงเฉพาะงานที่ยังไม่มีใครรับ (status = 1)'
+                          : 'แสดงเฉพาะงานที่คุณรับแล้ว',
+                      style: const TextStyle(fontSize: 14, color: Colors.brown),
                     ),
                     const SizedBox(height: 12),
+
+                    // ✅ แสดงข้อมูลงาน
                     StreamBuilder<List<QueryDocumentSnapshot>>(
                       stream: fetchJobs(),
                       builder: (context, snapshot) {
@@ -168,7 +143,14 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
 
                         final jobs = snapshot.data!;
                         if (jobs.isEmpty) {
-                          return const Text('ไม่มีงานจัดส่งในขณะนี้');
+                          return Center(
+                            child: Text(
+                              showAvailableJobs
+                                  ? 'ยังไม่มีงานว่างในขณะนี้'
+                                  : 'คุณยังไม่ได้รับงานใด ๆ',
+                              style: const TextStyle(color: Colors.brown),
+                            ),
+                          );
                         }
 
                         return Column(
@@ -190,6 +172,57 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         userData: widget.riderData,
+      ),
+    );
+  }
+
+  Widget _buildRiderInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC857),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orange.shade300.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 35,
+            backgroundColor: Colors.white,
+            backgroundImage:
+                widget.riderData['profile_picture'] != null &&
+                    widget.riderData['profile_picture'].isNotEmpty
+                ? NetworkImage(widget.riderData['profile_picture'])
+                : null,
+            child: widget.riderData['profile_picture'] == null
+                ? const Icon(Icons.person, size: 50)
+                : null,
+          ),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ยินดีต้อนรับ',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF5C3D2E),
+                ),
+              ),
+              Text(
+                'คุณ ${widget.riderData['name'] ?? 'ไรเดอร์'}',
+                style: TextStyle(fontSize: 15, color: Colors.orange.shade900),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -222,7 +255,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
           const SizedBox(height: 10),
           Row(
             children: [
-              if (!isAccepted)
+              if (showAvailableJobs && job['status'] == 1)
                 ElevatedButton.icon(
                   onPressed: () => acceptJob(jobId, job),
                   icon: const Icon(Icons.check_circle, size: 18),
@@ -232,7 +265,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                     foregroundColor: Colors.orange.shade800,
                   ),
                 ),
-              if (isAccepted)
+              if (!showAvailableJobs)
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
@@ -376,7 +409,6 @@ class RiderLocationUpdater {
   StreamSubscription<Position>? _positionStream;
 
   Future<void> startUpdating(String jobId) async {
-    // ขออนุญาตเข้าถึง location ก่อน
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
@@ -387,12 +419,11 @@ class RiderLocationUpdater {
       return;
     }
 
-    // เริ่มอัปเดตตำแหน่งเรียลไทม์
     _positionStream =
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.bestForNavigation,
-            distanceFilter: 5, // อัปเดตเมื่อเคลื่อนที่เกิน 5 เมตร
+            distanceFilter: 5,
           ),
         ).listen((position) async {
           try {
