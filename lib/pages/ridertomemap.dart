@@ -102,7 +102,7 @@ class RidersMapPage extends StatelessWidget {
                       LatLng(riderLat, riderLng),
                       LatLng(dropLat, dropLng),
                     ],
-                    color: Colors.orange,
+                    color: const Color.fromARGB(0, 255, 153, 0),
                     strokeWidth: 4,
                   ),
                 );
