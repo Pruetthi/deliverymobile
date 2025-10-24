@@ -184,7 +184,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           _buildMenuCard(
                             icon: Icons.location_on,
-                            label: 'ดูพัดสินค้า\nที่ส่ง',
+                            label: 'ดูพัสดุสินค้า\nที่ส่ง',
                             onTap: () {
                               // Navigate to track package
                             },
