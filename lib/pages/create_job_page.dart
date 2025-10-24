@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:delivery/widgets/custom_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get_connect/http/src/utils/utils.dart';
@@ -44,6 +45,12 @@ class _CreateJobPageState extends State<CreateJobPage> {
   void initState() {
     super.initState();
     _loadReceivers();
+  }
+
+  int _selectedIndex = 0;
+
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
   }
 
   /// ✅ โหลดรายชื่อผู้รับทั้งหมด
@@ -436,6 +443,11 @@ class _CreateJobPageState extends State<CreateJobPage> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: CustomBottomBar(
+        userData: widget.userData,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
       ),
     );
   }

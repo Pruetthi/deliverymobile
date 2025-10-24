@@ -19,235 +19,239 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8F0),
-      appBar: AppBar(
-        title: const Text('สินค้าที่ส่งมาหาฉัน'),
-        backgroundColor: const Color(0xFFFF6B35),
-        elevation: 2,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('jobs')
-            .where('receiver_uid', isEqualTo: widget.userData['uid'])
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Padding(
+        padding: const EdgeInsets.only(top: 30),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _firestore
+              .collection('jobs')
+              .where('receiver_uid', isEqualTo: widget.userData['uid'])
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                "ยังไม่มีสินค้าที่ส่งมาหาคุณ",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            );
-          }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text(
+                  "ยังไม่มีสินค้าที่ส่งมาหาคุณ",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              );
+            }
 
-          final jobs = snapshot.data!.docs;
+            final jobs = snapshot.data!.docs;
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: jobs.length,
-            itemBuilder: (context, index) {
-              final job = jobs[index].data() as Map<String, dynamic>;
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) {
+                final job = jobs[index].data() as Map<String, dynamic>;
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => JobDetailPage(
-                        jobData: job,
-                        userData: widget.userData,
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => JobDetailPage(
+                          jobData: {
+                            'id': jobs[index].id, // <<--- เพิ่มบรรทัดนี้
+                            ...job, // รวมข้อมูลทั้งหมดจาก Firestore
+                          },
+                          userData: widget.userData,
+                        ),
                       ),
+                    );
+                  },
+                  child: Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  );
-                },
-                child: Card(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  color: const Color(0xFFFFC857),
-                  elevation: 3,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // ชื่อสินค้า
-                        Row(
-                          children: [
-                            const Icon(Icons.inventory_2, color: Colors.white),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                job['item_name'] ?? 'ไม่ระบุชื่อสินค้า',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                    color: const Color(0xFFFFC857),
+                    elevation: 3,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // ชื่อสินค้า
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.inventory_2,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  job['item_name'] ?? 'ไม่ระบุชื่อสินค้า',
+                                  style: const TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-
-                        // รายละเอียดสินค้า
-                        Text(
-                          job['item_detail'] ?? '-',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
+                            ],
                           ),
-                        ),
+                          const SizedBox(height: 8),
 
-                        const SizedBox(height: 12),
-                        const Divider(color: Colors.white54),
-
-                        // ผู้ส่ง
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.person,
+                          // รายละเอียดสินค้า
+                          Text(
+                            job['item_detail'] ?? '-',
+                            style: const TextStyle(
+                              fontSize: 14,
                               color: Colors.white70,
-                              size: 18,
                             ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'ผู้ส่ง: ${job['sender_name']} (${job['sender_phone']})',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
 
-                        const SizedBox(height: 6),
+                          const SizedBox(height: 12),
+                          const Divider(color: Colors.white54),
 
-                        // ที่อยู่
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.home,
-                              color: Colors.white70,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-                            Expanded(
-                              child: Text(
-                                'ที่อยู่: ${job['address_text']}',
-                                style: const TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        // พิกัด
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.location_on,
-                              color: Colors.white70,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '(${(job['latitude'] as num?)?.toStringAsFixed(5)}, ${(job['longitude'] as num?)?.toStringAsFixed(5)})',
-                              style: const TextStyle(
+                          // ผู้ส่ง
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.person,
                                 color: Colors.white70,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'ผู้ส่ง: ${job['sender_name']} (${job['sender_phone']})',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // ที่อยู่
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.home,
+                                color: Colors.white70,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'ที่อยู่: ${job['address_text']}',
+                                  style: const TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // พิกัด
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.location_on,
+                                color: Colors.white70,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '(${(job['latitude'] as num?)?.toStringAsFixed(5)}, ${(job['longitude'] as num?)?.toStringAsFixed(5)})',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 10),
+
+                          // สถานะ
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade700,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _getStatusText(job['status']),
+                              style: const TextStyle(
+                                color: Colors.white,
                                 fontSize: 13,
                               ),
                             ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        // สถานะ
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 5,
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade700,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _getStatusText(job['status']),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
+                          // ปุ่มดูแผนที่
+                          const SizedBox(height: 10),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        JobTrackingPage(jobId: jobs[index].id),
+                                  ),
+                                );
+                              },
+
+                              icon: const Icon(Icons.map, color: Colors.white),
+                              label: const Text(
+                                "ดูแผนที่",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF6B35),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        // ปุ่มดูแผนที่
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: ElevatedButton.icon(
+                          const SizedBox(height: 10),
+                          ElevatedButton.icon(
                             onPressed: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) =>
-                                      JobTrackingPage(jobId: jobs[index].id),
+                                  builder: (context) => RidersMapPage(
+                                    receiverUid: widget.userData['uid'],
+                                  ),
                                 ),
                               );
                             },
-
-                            icon: const Icon(Icons.map, color: Colors.white),
+                            icon: const Icon(
+                              Icons.delivery_dining,
+                              color: Colors.white,
+                            ),
                             label: const Text(
-                              "ดูแผนที่",
+                              "ตำแหน่งไรเดอร์",
                               style: TextStyle(color: Colors.white),
                             ),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFFF6B35),
+                              backgroundColor: Colors.blueAccent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 10),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => RidersMapPage(
-                                  receiverUid: widget.userData['uid'],
-                                ),
-                              ),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.delivery_dining,
-                            color: Colors.white,
-                          ),
-                          label: const Text(
-                            "ตำแหน่งไรเดอร์",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
-          );
-        },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

@@ -224,107 +224,110 @@ class _JobDetailPageState extends State<JobDetailPage> {
     final int status = widget.jobData['status'] ?? 0;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('รายละเอียดงานส่งของ'),
-        backgroundColor: const Color(0xFFFF6B35),
-      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'รหัสสินค้า: ${widget.jobData['id']}',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ชื่อสินค้า: ${widget.jobData['item_name']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ที่อยู่ผู้รับ: $_receiverAddress',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
               color: const Color(0xFFFFC857),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade700,
-                            shape: BoxShape.circle,
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            status.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'รหัสสินค้า: ${widget.jobData['id']}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'ชื่อสินค้า: ${widget.jobData['item_name']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      'ที่อยู่ผู้รับ: $_receiverAddress',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Divider(color: Colors.white, thickness: 1, height: 20),
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade700,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              status.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _getStatusText(status),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Colors.white,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _getStatusText(status),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
 
-                  // รูปสินค้า / รูปล่าสุด Rider ถ่าย
-                  _buildItemImage(),
+                    // รูปสินค้า / รูปล่าสุด Rider ถ่าย
+                    _buildItemImage(),
 
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: _openMapPage,
-                    icon: const Icon(Icons.map),
-                    label: const Text("ดูตำแหน่งสินค้า"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange.shade700,
-                      minimumSize: const Size(double.infinity, 50),
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      onPressed: _openMapPage,
+                      icon: const Icon(Icons.map),
+                      label: const Text("ดูตำแหน่งสินค้า"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                        minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 20),
-                ],
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
           ],

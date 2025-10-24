@@ -33,171 +33,176 @@ class _MySentJobsPageState extends State<MySentJobsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8F0),
-      appBar: AppBar(
-        title: const Text('สินค้าที่กำลังส่งของฉัน'),
-        backgroundColor: const Color(0xFFFF6B35),
-        elevation: 2,
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('jobs')
-            .where('sender_uid', isEqualTo: widget.userData['uid'])
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Padding(
+        padding: const EdgeInsets.only(top: 30),
+        child: StreamBuilder<QuerySnapshot>(
+          stream: _firestore
+              .collection('jobs')
+              .where('sender_uid', isEqualTo: widget.userData['uid'])
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text(
-                "ยังไม่มีสินค้าที่คุณส่ง",
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-              ),
-            );
-          }
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text(
+                  "ยังไม่มีสินค้าที่คุณส่ง",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              );
+            }
 
-          final jobList = snapshot.data!.docs.map((doc) {
-            final job = doc.data() as Map<String, dynamic>;
-            job['id'] = doc.id;
-            return job;
-          }).toList();
+            final jobList = snapshot.data!.docs.map((doc) {
+              final job = doc.data() as Map<String, dynamic>;
+              job['id'] = doc.id;
+              return job;
+            }).toList();
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: jobList.length,
-            itemBuilder: (context, index) {
-              final job = jobList[index];
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: jobList.length,
+              itemBuilder: (context, index) {
+                final job = jobList[index];
 
-              return FutureBuilder<String>(
-                future: _addressCache[job['id']] != null
-                    ? Future.value(_addressCache[job['id']])
-                    : _getAddressFromLatLng(job['latitude'], job['longitude']),
-                builder: (context, addressSnapshot) {
-                  if (addressSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(16),
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
-                    );
-                  }
-
-                  final address = addressSnapshot.data ?? "-";
-                  _addressCache[job['id']] = address;
-
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => JobDetailPage(
-                            jobData: job,
-                            userData: widget.userData,
-                          ),
+                return FutureBuilder<String>(
+                  future: _addressCache[job['id']] != null
+                      ? Future.value(_addressCache[job['id']])
+                      : _getAddressFromLatLng(
+                          job['latitude'],
+                          job['longitude'],
+                        ),
+                  builder: (context, addressSnapshot) {
+                    if (addressSnapshot.connectionState ==
+                        ConnectionState.waiting) {
+                      return const Card(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
                         ),
                       );
-                    },
-                    child: Card(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      color: const Color(0xFFFFC857),
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'รหัสสินค้า: ${job['id']}',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
+                    }
+
+                    final address = addressSnapshot.data ?? "-";
+                    _addressCache[job['id']] = address;
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => JobDetailPage(
+                              jobData: job,
+                              userData: widget.userData,
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              job['item_name'] ?? 'ไม่ระบุชื่อสินค้า',
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              job['item_detail'] ?? '-',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.white70,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            const Divider(color: Colors.white54),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.person,
-                                  color: Colors.white70,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'ผู้รับ: ${job['receiver_name']} (${job['receiver_phone']})',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(
-                                  Icons.home,
-                                  color: Colors.white70,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'ที่อยู่: $address',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.shade700,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                _getStatusText(job['status']),
+                          ),
+                        );
+                      },
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        color: const Color(0xFFFFC857),
+                        elevation: 3,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'รหัสสินค้า: ${job['id']}',
                                 style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
+                                  fontSize: 14,
+                                  color: Colors.white70,
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 6),
+                              Text(
+                                job['item_name'] ?? 'ไม่ระบุชื่อสินค้า',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                job['item_detail'] ?? '-',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              const Divider(color: Colors.white54),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'ผู้รับ: ${job['receiver_name']} (${job['receiver_phone']})',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.home,
+                                    color: Colors.white70,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'ที่อยู่: $address',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade700,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  _getStatusText(job['status']),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  );
-                },
-              );
-            },
-          );
-        },
+                    );
+                  },
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }

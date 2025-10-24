@@ -68,11 +68,6 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8F0),
-      appBar: AppBar(
-        title: const Text('โปรไฟล์ของฉัน'),
-        backgroundColor: const Color(0xFFFF6B35),
-        elevation: 2,
-      ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Center(
