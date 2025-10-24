@@ -209,7 +209,7 @@ class _MySentJobsPageState extends State<MySentJobsPage> {
       case 2:
         return "กำลังดำเนินการส่ง";
       case 3:
-        return "จัดส่งสำเร็จ";
+        return "ไรเดอร์รับสินค้าแล้ว";
       case 4:
         return "งานเสร็จสิ้น";
       default:

@@ -215,9 +215,11 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
       case 1:
         return "รอคนรับงาน";
       case 2:
-        return "กำลังดำเนินการส่ง";
+        return "ไรเดอร์รับงาน";
       case 3:
-        return "จัดส่งสำเร็จ";
+        return "ไรเดอร์รับสินค้าแล้วและกำลังเดินทางไปส่ง";
+      case 4:
+        return "ไรเดอร์นำส่งสินค้าแล้ว";
       default:
         return "ไม่ทราบสถานะ";
     }
