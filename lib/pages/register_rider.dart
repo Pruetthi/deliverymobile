@@ -241,10 +241,16 @@ class _RegisterRiderPageState extends State<RegisterRiderPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _loading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Confirm"),
+                  : const Text(
+                      "Confirm",
+                      style: TextStyle(color: Colors.white),
+                    ),
             ),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,12 +21,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final nameCtl = TextEditingController();
   final phoneCtl = TextEditingController();
   final passwordCtl = TextEditingController();
-  final addressCtl = TextEditingController();
-  final altAddressCtl = TextEditingController();
 
   final db = FirebaseFirestore.instance;
   LatLng? addressLocation;
   LatLng? altAddressLocation;
+  String? addressName;
+  String? altAddressName;
 
   final String thunderforestKey = '88f9690d7c84430e8ebb75502e511790';
 
@@ -233,8 +234,6 @@ class _RegisterPageState extends State<RegisterPage> {
       'phone': phoneCtl.text,
       'password': passwordCtl.text,
       'profile_picture': imageUrl ?? '',
-      'address': addressCtl.text,
-      'alt_address': altAddressCtl.text,
       'status': 'user',
       'createdAt': DateTime.now(),
       'location1': {
@@ -271,39 +270,77 @@ class _RegisterPageState extends State<RegisterPage> {
               keyboardType: TextInputType.phone,
             ),
             _buildTextField("Password", passwordCtl, obscureText: true),
-            _buildTextField("Address", addressCtl),
             _buildSelectButton(
               context,
               "เลือกตำแหน่งที่อยู่หลัก",
               addressLocation,
               (loc) => setState(() => addressLocation = loc),
+              isMain: true,
             ),
-            _buildTextField("Alternate Address", altAddressCtl),
             _buildSelectButton(
               context,
               "เลือกตำแหน่งที่อยู่สำรอง",
               altAddressLocation,
               (loc) => setState(() => altAddressLocation = loc),
+              isMain: false,
             ),
             const SizedBox(height: 10),
             if (_pickedImage != null)
-              Image.file(_pickedImage!, height: 150, fit: BoxFit.cover),
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.file(
+                    _pickedImage!,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
             ElevatedButton.icon(
               onPressed: pickImage,
-              icon: const Icon(Icons.photo),
-              label: const Text("เลือกรูปโปรไฟล์"),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
+              icon: const Icon(Icons.photo, color: Colors.white),
+              label: const Text(
+                "เลือกรูปโปรไฟล์",
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFAB12F), // สีหลักของปุ่ม
+                foregroundColor: Colors.white, // สีของข้อความและไอคอน
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _loading ? null : addData,
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size(200, 50),
-                backgroundColor: Colors.orange,
+                minimumSize: const Size(double.infinity, 50),
+                backgroundColor: const Color(0xFFFA812F),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _loading
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Confirm"),
+                  : const Text(
+                      "Confirm",
+                      style: TextStyle(color: Colors.white),
+                    ),
             ),
           ],
         ),
@@ -340,8 +377,9 @@ class _RegisterPageState extends State<RegisterPage> {
     BuildContext context,
     String label,
     LatLng? loc,
-    Function(LatLng?) onSelect,
-  ) {
+    Function(LatLng?) onSelect, {
+    bool isMain = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: ElevatedButton.icon(
@@ -349,11 +387,41 @@ class _RegisterPageState extends State<RegisterPage> {
         label: Text(
           loc == null
               ? label
-              : "$label (เลือกแล้ว: ${loc.latitude.toStringAsFixed(4)}, ${loc.longitude.toStringAsFixed(4)})",
+              : isMain
+              ? "$label (เลือกแล้ว: ${addressName ?? "กำลังแปลงที่อยู่..."})"
+              : "$label (เลือกแล้ว: ${altAddressName ?? "กำลังแปลงที่อยู่..."})",
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         onPressed: () async {
           LatLng? selected = await _pickLocationDialog(context, loc);
-          if (selected != null) onSelect(selected);
+          if (selected != null) {
+            // ✅ แปลงพิกัดเป็นชื่อที่อยู่
+            List<Placemark> placemarks = await placemarkFromCoordinates(
+              selected.latitude,
+              selected.longitude,
+            );
+
+            if (placemarks.isNotEmpty) {
+              final p = placemarks.first;
+              String formatted = [
+                p.name,
+                p.subLocality,
+                p.locality,
+                p.administrativeArea,
+                p.country,
+              ].where((e) => e != null && e!.isNotEmpty).join(", ");
+
+              setState(() {
+                onSelect(selected);
+                if (isMain) {
+                  addressName = formatted;
+                } else {
+                  altAddressName = formatted;
+                }
+              });
+            }
+          }
         },
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
