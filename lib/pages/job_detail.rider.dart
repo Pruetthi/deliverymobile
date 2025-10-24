@@ -12,11 +12,14 @@ class JobDetailRiderPage extends StatefulWidget {
   final Map<String, dynamic> jobData;
   final Map<String, dynamic> userData;
   final Map<String, dynamic> riderData;
+  final String jobId;
+
   const JobDetailRiderPage({
     super.key,
     required this.jobData,
     required this.userData,
     required this.riderData,
+    required this.jobId,
   });
 
   @override
@@ -30,7 +33,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
   File? _photo;
   String? _displayImage; // แสดงรูปล่าสุด (url หรือ path)
   final cloudinary = CloudinaryPublic(
-    'daqjnjmto', // Cloud name ของคุณ
+    'daqjnjmto', // Cloud name
     'unsigned_delivery', // upload preset
     cache: false,
   );
@@ -44,12 +47,18 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
 
   void _onItemTapped(int index) => setState(() => _selectedIndex = index);
 
+  int getStatus() {
+    final s = widget.jobData['status'];
+    if (s is int) return s;
+    return int.tryParse(s.toString()) ?? 0;
+  }
+
   String _getStatusText(int status) {
     switch (status) {
       case 1:
         return "รอไรเดอร์มารับสินค้า";
       case 2:
-        return "ไรเดอร์รับงาน (กำลังเดินทางมารับสินค้า)";
+        return "ไรเดอร์รับงาน (ถ่ายรูปสินค้าก่อนรับงาน)";
       case 3:
         return "ไรเดอร์รับสินค้าแล้วและกำลังเดินทางไปส่ง";
       case 4:
@@ -164,7 +173,6 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
     );
   }
 
-  bool _canConfirm = false;
   Future<void> _takePhoto() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
@@ -175,72 +183,92 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
     if (pickedFile != null) {
       setState(() {
         _photo = File(pickedFile.path);
-        _displayImage = _photo!.path; // แสดงรูปก่อนอัปโหลด
-        _canConfirm = true;
+        _displayImage = _photo!.path;
       });
     }
   }
 
-  void _startDelivery() async {
-    await FirebaseFirestore.instance
-        .collection('jobs')
-        .doc(widget.jobData['id'])
-        .update({'status': 3});
-
-    setState(() {
-      widget.jobData['status'] = 3;
-    });
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('กำลังไปส่งสินค้า 🚴')));
-  }
-
-  Future<void> _confirmDelivery() async {
-    if (_photo == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาถ่ายรูปยืนยันก่อนส่ง ✅')),
-      );
-      return;
-    }
+  Future<void> _uploadPickupPhoto() async {
+    if (_photo == null) return;
 
     try {
-      // อัปโหลดรูปไป Cloudinary
       CloudinaryResponse response = await cloudinary.uploadFile(
         CloudinaryFile.fromFile(_photo!.path, folder: 'delivery_photos'),
       );
 
       final imageUrl = response.secureUrl;
 
-      // อัปเดต Firestore
+      // เก็บรูป
+      await FirebaseFirestore.instance.collection('images').add({
+        'job_id': widget.jobId,
+        'rider_id': widget.riderData['rid'],
+        'image_type': 'pickup',
+        'image_url': imageUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      // อัปเดต status
       await FirebaseFirestore.instance
           .collection('jobs')
-          .doc(widget.jobData['id'])
-          .update({
-            'status': 4,
-            'item_image': imageUrl, // เปลี่ยนรูปเป็น URL จาก Cloudinary
-          });
+          .doc(widget.jobId)
+          .update({'status': 3});
 
       setState(() {
-        widget.jobData['status'] = 4;
-        _displayImage = imageUrl; // แสดงรูปใหม่
+        widget.jobData['status'] = 3;
+        _displayImage = imageUrl;
       });
 
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('ยืนยันการส่งสำเร็จ ✅')));
-
-      Navigator.pop(context);
+      ).showSnackBar(const SnackBar(content: Text('อัปโหลดรูปสินค้าสำเร็จ ✅')));
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('อัปโหลดรูปล้มเหลว: $e')));
+      ).showSnackBar(SnackBar(content: Text('อัปโหลดล้มเหลว: $e')));
+    }
+  }
+
+  Future<void> _confirmDelivery() async {
+    if (_photo == null) return;
+
+    try {
+      CloudinaryResponse response = await cloudinary.uploadFile(
+        CloudinaryFile.fromFile(_photo!.path, folder: 'delivery_photos'),
+      );
+
+      final imageUrl = response.secureUrl;
+
+      await FirebaseFirestore.instance.collection('images').add({
+        'job_id': widget.jobId,
+        'rider_id': widget.riderData['rid'],
+        'image_type': 'delivery',
+        'image_url': imageUrl,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+
+      await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(widget.jobId)
+          .update({'status': 4});
+
+      setState(() {
+        widget.jobData['status'] = 4;
+        _displayImage = imageUrl;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('ยืนยันการส่งสินค้า ✅')));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('อัปโหลดล้มเหลว: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final int status = widget.jobData['status'] ?? 0;
+    final int status = getStatus();
 
     return Scaffold(
       appBar: AppBar(
@@ -253,7 +281,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'รหัสสินค้า: ${widget.jobData['id']}',
+              'รหัสสินค้า: ${widget.jobId}',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
@@ -326,7 +354,6 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    // แสดงรูปล่าสุด (url หรือ path)
                     _displayImage != null
                         ? _displayImage!.startsWith('http')
                               ? Image.network(
@@ -368,21 +395,21 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton.icon(
-                      onPressed: status == 2 || (status == 3 && _canConfirm)
-                          ? () {
+                      onPressed: _photo == null
+                          ? null
+                          : () async {
                               if (status == 2) {
-                                _startDelivery();
+                                await _uploadPickupPhoto();
                               } else if (status == 3) {
-                                _confirmDelivery();
+                                await _confirmDelivery();
                               }
-                            }
-                          : null,
+                            },
                       icon: const Icon(Icons.directions_bike),
                       label: Text(
                         status == 2
-                            ? "กำลังไปส่ง"
+                            ? "อัปโหลดรูปรับสินค้าแล้ว"
                             : status == 3
-                            ? "ยืนยันการส่งสำเร็จ"
+                            ? "ยืนยันการส่ง"
                             : "เสร็จสิ้น",
                       ),
                       style: ElevatedButton.styleFrom(

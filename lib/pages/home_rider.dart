@@ -240,6 +240,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                           jobData: job,
                           userData: widget.riderData,
                           riderData: widget.riderData,
+                          jobId: jobId,
                         ),
                       ),
                     );
