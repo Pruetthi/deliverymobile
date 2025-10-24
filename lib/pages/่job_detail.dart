@@ -249,29 +249,29 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    _buildInfoRow(
+                      Icons.inventory_2,
                       'ชื่อสินค้า: ${widget.jobData['item_name']}',
-                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    _buildInfoRow(
+                      Icons.description,
                       'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
-                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    _buildInfoRow(
+                      Icons.person,
                       'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
-                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    _buildInfoRow(
+                      Icons.person_outline,
                       'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
-                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 10),
-                    Text(
+                    _buildInfoRow(
+                      Icons.home,
                       'ที่อยู่ผู้รับ: $_receiverAddress',
-                      style: const TextStyle(fontSize: 18),
                     ),
                     const SizedBox(height: 10),
                     Divider(color: Colors.white, thickness: 1, height: 20),
@@ -332,6 +332,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade700,
                         minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: Colors.white,
                       ),
                     ),
 
@@ -348,6 +349,17 @@ class _JobDetailPageState extends State<JobDetailPage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.orange.shade700),
+        const SizedBox(width: 8),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 18))),
+      ],
     );
   }
 }
