@@ -1,3 +1,4 @@
+import 'package:delivery/pages/all_map_sender.dart';
 import 'package:delivery/pages/create_job_page.dart';
 import 'package:delivery/pages/my_received_jobs_page.dart';
 import 'package:delivery/pages/my_sent_jobs_page.dart';
@@ -186,7 +187,14 @@ class _HomePageState extends State<HomePage> {
                             icon: Icons.location_on,
                             label: 'ดูพัสดุสินค้า\nที่ส่ง',
                             onTap: () {
-                              // Navigate to track package
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AllMapSenderPage(
+                                    senderId: widget.userData['uid'] ?? '',
+                                  ),
+                                ),
+                              );
                             },
                           ),
                           _buildMenuCard(

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:delivery/pages/%E0%B9%88job_detail.dart';
+import 'package:delivery/pages/all_map_received.dart';
 import 'package:delivery/pages/job_tracking_page.dart';
 import 'package:delivery/pages/ridertomemap.dart';
 import 'package:flutter/material.dart';
@@ -250,6 +251,34 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
               },
             );
           },
+        ),
+      ),
+      bottomNavigationBar: BottomAppBar(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFF6B35),
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () {
+              // เปลี่ยน 'yourRiderId' เป็น uid ของผู้รับงานจริง ๆ
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AllMapReceivedPage(receiverId: widget.userData['uid']),
+                ),
+              );
+            },
+            child: const Text(
+              'ดูแผนที่ของที่จะมาส่งทั้งหมด',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ),
       ),
     );
