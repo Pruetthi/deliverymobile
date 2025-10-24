@@ -190,29 +190,27 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
                           ),
                           // ปุ่มดูแผนที่
                           const SizedBox(height: 10),
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        JobTrackingPage(jobId: jobs[index].id),
-                                  ),
-                                );
-                              },
-
-                              icon: const Icon(Icons.map, color: Colors.white),
-                              label: const Text(
-                                "ดูแผนที่",
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF6B35),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      JobTrackingPage(jobId: jobs[index].id),
                                 ),
+                              );
+                            },
+
+                            icon: const Icon(Icons.map, color: Colors.white),
+                            label: const Text(
+                              "ดูแผนที่",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFFF6B35),
+                              minimumSize: const Size(double.infinity, 50),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
                           ),
@@ -238,6 +236,7 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blueAccent,
+                              minimumSize: const Size(double.infinity, 50),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
