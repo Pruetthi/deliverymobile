@@ -47,21 +47,33 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
   Future<void> acceptJob(String jobId, Map<String, dynamic> job) async {
     try {
       final rider = widget.riderData;
+
+      // 🔹 ดึงตำแหน่งปัจจุบัน
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+      );
+
       await FirebaseFirestore.instance.collection('jobs').doc(jobId).update({
         'status': 2,
-        'rider_uid': rider['rid'], // ✅ แก้ตรงนี้
+        'rider_uid': rider['rid'], // ใช้ rid
         'rider_name': rider['name'],
         'rider_phone': rider['phone'],
         'rider_vehicle_number': rider['vehicle_number'],
         'rider_profile': rider['profile_picture'],
         'accepted_at': FieldValue.serverTimestamp(),
+        'rider_lat': position.latitude, // เพิ่มตำแหน่งตอนรับงาน
+        'rider_lng': position.longitude, // เพิ่มตำแหน่งตอนรับงาน
+        'rider_updated_at': FieldValue.serverTimestamp(),
       });
 
+      // 🔹 เริ่มอัปเดตตำแหน่งแบบเรียลไทม์ต่อ
       RiderLocationUpdater().startUpdating(jobId);
 
       setState(() {
         job['status'] = 2;
         job['rider_uid'] = rider['rid'];
+        job['rider_lat'] = position.latitude; // เก็บใน local job map ด้วย
+        job['rider_lng'] = position.longitude;
       });
 
       ScaffoldMessenger.of(
