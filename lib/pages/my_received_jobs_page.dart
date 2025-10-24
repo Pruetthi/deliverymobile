@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:delivery/pages/%E0%B9%88job_detail.dart';
 import 'package:delivery/pages/job_tracking_page.dart';
+import 'package:delivery/pages/ridertomemap.dart';
 import 'package:flutter/material.dart';
 
 class MyReceivedJobsPage extends StatefulWidget {
@@ -209,6 +210,33 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        ElevatedButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => RidersMapPage(
+                                  receiverUid: widget.userData['uid'],
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.delivery_dining,
+                            color: Colors.white,
+                          ),
+                          label: const Text(
+                            "ตำแหน่งไรเดอร์",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blueAccent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
                             ),
                           ),
                         ),
