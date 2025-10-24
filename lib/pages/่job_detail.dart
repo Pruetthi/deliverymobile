@@ -1,3 +1,4 @@
+import 'package:delivery/pages/job_tracking_page.dart';
 import 'package:delivery/widgets/custom_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
@@ -315,13 +316,22 @@ class _JobDetailPageState extends State<JobDetailPage> {
 
                     const SizedBox(height: 10),
                     ElevatedButton.icon(
-                      onPressed: _openMapPage,
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => JobTrackingPage(
+                              jobId:
+                                  widget.jobData['id'], // <-- ส่ง jobId ที่นี่
+                            ),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.map),
                       label: const Text("ดูตำแหน่งสินค้า"),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade700,
                         minimumSize: const Size(double.infinity, 50),
-                        foregroundColor: Colors.white,
                       ),
                     ),
 
