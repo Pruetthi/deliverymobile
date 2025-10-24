@@ -156,6 +156,7 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                         return Column(
                           children: jobs.map((doc) {
                             final job = doc.data() as Map<String, dynamic>;
+                            job['id'] = doc.id;
                             return _buildJobCard(job, doc.id);
                           }).toList(),
                         );

@@ -30,6 +30,7 @@ class JobDetailRiderPage extends StatefulWidget {
 class _JobDetailPageState extends State<JobDetailRiderPage> {
   int _selectedIndex = 0;
   String _receiverAddress = "-";
+  String _senderAddress = "-";
 
   File? _photo;
   String? _displayImage; // แสดงรูปล่าสุด (url หรือ path)
@@ -43,6 +44,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
   void initState() {
     super.initState();
     _loadAddress();
+    _loadSenderAddress();
     _displayImage = widget.jobData['item_image'];
   }
 
@@ -69,6 +71,26 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
     }
   }
 
+  Future<void> _loadSenderAddress() async {
+    try {
+      final lat = widget.jobData['pickup_latitude'] as double?;
+      final lng = widget.jobData['pickup_longitude'] as double?;
+      if (lat != null && lng != null) {
+        List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
+        if (placemarks.isNotEmpty) {
+          final p = placemarks.first;
+          setState(() {
+            _senderAddress =
+                "${p.street ?? ''} ${p.thoroughfare ?? ''} ${p.subLocality ?? ''} ${p.locality ?? ''} ${p.administrativeArea ?? ''}"
+                    .trim();
+          });
+        }
+      }
+    } catch (e) {
+      setState(() => _senderAddress = "-");
+    }
+  }
+
   Future<void> _loadAddress() async {
     try {
       final lat = widget.jobData['latitude'] as double?;
@@ -79,7 +101,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
           final p = placemarks.first;
           setState(() {
             _receiverAddress =
-                "${p.thoroughfare ?? ''} ${p.subLocality ?? ''} ${p.locality ?? ''} ${p.administrativeArea ?? ''}"
+                "${p.street ?? ''} ${p.thoroughfare ?? ''} ${p.subLocality ?? ''} ${p.locality ?? ''} ${p.administrativeArea ?? ''}"
                     .trim();
           });
         }
@@ -267,45 +289,11 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
     final int status = getStatus();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('รายละเอียดงานส่งของ'),
-        backgroundColor: const Color(0xFFFF6B35),
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 40, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'รหัสสินค้า: ${widget.jobId}',
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ชื่อสินค้า: ${widget.jobData['item_name']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'ที่อยู่ผู้รับ: $_receiverAddress',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 10),
             Card(
               elevation: 4,
               shape: RoundedRectangleBorder(
@@ -317,6 +305,53 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      'รหัสสินค้า: ${widget.jobData['id']}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.inventory_2,
+                      'ชื่อสินค้า: ${widget.jobData['item_name']}',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.description,
+                      'รายละเอียดสินค้า: ${widget.jobData['item_detail']}',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.person,
+                      'ชื่อผู้ส่ง: ${widget.jobData['sender_name']}',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.phone,
+                      'เบอร์ผู้ส่ง: ${widget.jobData['sender_phone']}',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(Icons.home, 'ที่อยู่ผู้ส่ง: $_senderAddress'),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.person_outline,
+                      'ชื่อผู้รับ: ${widget.jobData['receiver_name']}',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.phone,
+                      'เบอร์ผู้รับ: ${widget.jobData['receiver_phone']}',
+                    ),
+                    const SizedBox(height: 10),
+                    _buildInfoRow(
+                      Icons.home,
+                      'ที่อยู่ผู้รับ: $_receiverAddress',
+                    ),
+                    const SizedBox(height: 10),
+                    Divider(color: Colors.white, thickness: 1, height: 20),
                     Row(
                       children: [
                         Container(
@@ -366,15 +401,6 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                                 )
                         : const SizedBox.shrink(),
                     const SizedBox(height: 12),
-                    // ElevatedButton.icon(
-                    //   onPressed: _openMapPage,
-                    //   icon: const Icon(Icons.map),
-                    //   label: const Text("ดูตำแหน่งสินค้า"),
-                    //   style: ElevatedButton.styleFrom(
-                    //     backgroundColor: Colors.orange.shade700,
-                    //     minimumSize: const Size(double.infinity, 50),
-                    //   ),
-                    // ),
                     ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -391,6 +417,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade700,
                         minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: Colors.white,
                       ),
                     ),
 
@@ -406,6 +433,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue.shade700,
                         minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -430,6 +458,7 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange.shade700,
                         minimumSize: const Size(double.infinity, 50),
+                        foregroundColor: Colors.white,
                       ),
                     ),
                   ],
@@ -444,6 +473,22 @@ class _JobDetailPageState extends State<JobDetailRiderPage> {
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
       ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.orange.shade700),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 18, color: Colors.white),
+          ),
+        ),
+      ],
     );
   }
 }
