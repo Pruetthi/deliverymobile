@@ -46,6 +46,18 @@ class RidersMapPage extends StatelessWidget {
             final riderLng = (job['rider_lng'] ?? 0).toDouble();
             final dropLat = (job['latitude'] ?? 0).toDouble();
             final dropLng = (job['longitude'] ?? 0).toDouble();
+            final riderUid = job['rider_uid'] ?? '';
+            Color riderColor;
+            switch (riderUid) {
+              case 'rider1':
+                riderColor = Colors.blue;
+                break;
+              case 'rider2':
+                riderColor = Colors.green;
+                break;
+              default:
+                riderColor = Colors.orange;
+            }
 
             // ✅ ตรวจว่ามีพิกัดจริง
             if (riderLat != 0 &&
@@ -60,9 +72,9 @@ class RidersMapPage extends StatelessWidget {
                   height: 45,
                   child: Tooltip(
                     message: job['rider_name'] ?? 'ไรเดอร์',
-                    child: const Icon(
+                    child: Icon(
                       Icons.directions_bike,
-                      color: Colors.blueAccent,
+                      color: riderColor, // ใช้สีตามตัวเลือกข้างบน
                       size: 45,
                     ),
                   ),
