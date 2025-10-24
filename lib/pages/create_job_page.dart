@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart'; // ✅ ใช้แปลงพิกัดเป็นชื่อที่อยู่
+import 'package:geocoding/geocoding.dart';
 
 class CreateJobPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -19,16 +19,15 @@ class _CreateJobPageState extends State<CreateJobPage> {
   final phoneController = TextEditingController();
   final itemNameController = TextEditingController();
   final itemDetailController = TextEditingController();
-
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  bool _loading = false;
 
+  bool _loading = false;
   Map<String, dynamic>? receiverData;
   String? selectedType;
   Map<String, dynamic>? selectedAddress;
-
   File? _pickedImage;
   String? uploadedImageUrl;
+
   final ImagePicker _picker = ImagePicker();
   final cloudinary = CloudinaryPublic(
     'daqjnjmto',
@@ -38,8 +37,25 @@ class _CreateJobPageState extends State<CreateJobPage> {
 
   String? address1Text;
   String? address2Text;
+  List<Map<String, dynamic>> allReceivers = [];
 
-  /// ✅ ดึงตำแหน่ง GPS ปัจจุบันของผู้ส่ง
+  @override
+  void initState() {
+    super.initState();
+    _loadReceivers();
+  }
+
+  /// ✅ โหลดรายชื่อผู้รับทั้งหมด
+  Future<void> _loadReceivers() async {
+    final snapshot = await _firestore.collection('user').get();
+    setState(() {
+      allReceivers = snapshot.docs
+          .map((doc) => doc.data() as Map<String, dynamic>)
+          .toList();
+    });
+  }
+
+  /// ✅ ดึงตำแหน่ง GPS ปัจจุบัน
   Future<Position?> getCurrentLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -48,20 +64,18 @@ class _CreateJobPageState extends State<CreateJobPage> {
       );
       return null;
     }
-
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return null;
     }
     if (permission == LocationPermission.deniedForever) return null;
-
     return await Geolocator.getCurrentPosition(
       desiredAccuracy: LocationAccuracy.high,
     );
   }
 
-  /// ✅ แปลงพิกัดเป็นชื่อสถานที่ (เช่น ถนน / เขต / จังหวัด)
+  /// ✅ แปลงพิกัดเป็นชื่อสถานที่
   Future<String> getAddressFromLatLng(double lat, double lng) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
@@ -76,26 +90,23 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return "ไม่พบที่อยู่";
   }
 
-  /// ✅ โหลดชื่อที่อยู่จากพิกัดของผู้รับ
+  /// ✅ โหลดชื่อที่อยู่จาก lat/lng
   Future<void> loadReceiverAddresses() async {
     if (receiverData != null) {
       final loc1 = receiverData!['location1'];
       final loc2 = receiverData!['location2'];
-
       if (loc1 != null) {
         address1Text = await getAddressFromLatLng(
           loc1['latitude'],
           loc1['longitude'],
         );
       }
-
       if (loc2 != null) {
         address2Text = await getAddressFromLatLng(
           loc2['latitude'],
           loc2['longitude'],
         );
       }
-
       setState(() {});
     }
   }
@@ -107,16 +118,13 @@ class _CreateJobPageState extends State<CreateJobPage> {
       imageQuality: 80,
     );
     if (image != null) {
-      setState(() {
-        _pickedImage = File(image.path);
-      });
+      setState(() => _pickedImage = File(image.path));
     }
   }
 
   /// ✅ อัปโหลดรูปไป Cloudinary
   Future<void> uploadImage() async {
     if (_pickedImage == null) return;
-
     try {
       CloudinaryResponse response = await cloudinary.uploadFile(
         CloudinaryFile.fromFile(_pickedImage!.path, folder: "delivery_jobs"),
@@ -130,7 +138,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
   }
 
-  /// ✅ ค้นหาผู้รับ
+  /// ✅ ค้นหาผู้รับจากเบอร์โทร
   Future<void> searchReceiver() async {
     final phone = phoneController.text.trim();
     if (phone.isEmpty) {
@@ -140,30 +148,19 @@ class _CreateJobPageState extends State<CreateJobPage> {
       return;
     }
 
-    setState(() {
-      _loading = true;
-      receiverData = null;
-      selectedType = null;
-      selectedAddress = null;
-    });
-
+    setState(() => _loading = true);
     try {
       final query = await _firestore
           .collection('user')
           .where('phone', isEqualTo: phone)
           .limit(1)
           .get();
-
       if (query.docs.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('❌ ไม่พบผู้ใช้หมายเลขนี้ในระบบ')),
         );
       } else {
-        setState(() {
-          receiverData = query.docs.first.data();
-        });
-
-        /// ✅ โหลดชื่อที่อยู่จาก lat/lng
+        setState(() => receiverData = query.docs.first.data());
         await loadReceiverAddresses();
       }
     } catch (e) {
@@ -171,8 +168,46 @@ class _CreateJobPageState extends State<CreateJobPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('เกิดข้อผิดพลาด: $e')));
     }
-
     setState(() => _loading = false);
+  }
+
+  /// ✅ แสดง dialog เลือกผู้รับจากลิสต์
+  void _showReceiverList() {
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text('เลือกผู้รับสินค้า'),
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 400,
+            child: ListView.builder(
+              itemCount: allReceivers.length,
+              itemBuilder: (context, index) {
+                final user = allReceivers[index];
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage:
+                        user['profile_picture'] != null &&
+                            user['profile_picture'] != ""
+                        ? NetworkImage(user['profile_picture'])
+                        : const AssetImage('assets/default_user.png')
+                              as ImageProvider,
+                  ),
+                  title: Text(user['name'] ?? 'ไม่ระบุชื่อ'),
+                  subtitle: Text("📞 ${user['phone'] ?? '-'}"),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    setState(() => receiverData = user);
+                    await loadReceiverAddresses();
+                  },
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 
   /// ✅ สร้างงานส่งสินค้า
@@ -192,7 +227,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
 
     setState(() => _loading = true);
-
     Position? currentLocation = await getCurrentLocation();
     if (currentLocation == null) {
       setState(() => _loading = false);
@@ -200,7 +234,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
 
     try {
-      /// ✅ อัปโหลดรูปอัตโนมัติ (ถ้ายังไม่ได้อัปโหลด)
       if (_pickedImage != null && uploadedImageUrl == null) {
         await uploadImage();
       }
@@ -209,19 +242,15 @@ class _CreateJobPageState extends State<CreateJobPage> {
         "receiver_phone": receiverData!['phone'],
         "receiver_name": receiverData!['name'],
         "receiver_uid": receiverData!['uid'],
-
         "sender_uid": widget.userData['uid'],
         "sender_name": widget.userData['name'],
         "sender_phone": widget.userData['phone'],
-
         "pickup_latitude": currentLocation.latitude,
         "pickup_longitude": currentLocation.longitude,
-
         "address_type": selectedType,
         "address_text": selectedAddress!['text'],
         "latitude": selectedAddress!['latitude'],
         "longitude": selectedAddress!['longitude'],
-
         "item_name": itemNameController.text,
         "item_detail": itemDetailController.text,
         "item_image": uploadedImageUrl ?? "",
@@ -248,6 +277,13 @@ class _CreateJobPageState extends State<CreateJobPage> {
       appBar: AppBar(
         title: const Text("สร้างงานส่งสินค้า"),
         backgroundColor: const Color(0xFFFF6B35),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list),
+            onPressed: _showReceiverList,
+            tooltip: 'เลือกรายชื่อผู้รับ',
+          ),
+        ],
       ),
       backgroundColor: const Color(0xFFFFF8F0),
       body: Padding(
@@ -257,7 +293,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
             TextField(
               controller: phoneController,
               decoration: InputDecoration(
-                labelText: "เบอร์โทรผู้รับ",
+                labelText: "ค้นหาด้วยเบอร์โทรผู้รับ",
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.search),
                   onPressed: searchReceiver,
@@ -270,17 +306,27 @@ class _CreateJobPageState extends State<CreateJobPage> {
             if (_loading)
               const Center(child: CircularProgressIndicator())
             else if (receiverData != null) ...[
-              Text(
-                "ชื่อผู้รับ: ${receiverData!['name']}",
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Card(
+                color: Colors.white,
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundImage:
+                        receiverData!['profile_picture'] != null &&
+                            receiverData!['profile_picture'] != ""
+                        ? NetworkImage(receiverData!['profile_picture'])
+                        : const AssetImage('assets/default_user.png')
+                              as ImageProvider,
+                  ),
+                  title: Text(receiverData!['name']),
+                  subtitle: Text("📞 ${receiverData!['phone']}"),
                 ),
               ),
               const SizedBox(height: 10),
               const Text("เลือกที่อยู่จัดส่ง:", style: TextStyle(fontSize: 16)),
-              const SizedBox(height: 5),
-
               RadioListTile<String>(
                 title: Text("ที่อยู่หลัก (${address1Text ?? 'กำลังโหลด...'})"),
                 value: 'main',
@@ -313,35 +359,28 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   });
                 },
               ),
-              const Divider(),
             ],
 
+            const Divider(),
             TextField(
               controller: itemNameController,
               decoration: const InputDecoration(labelText: "ชื่อสินค้า"),
             ),
             const SizedBox(height: 10),
-
             TextField(
               controller: itemDetailController,
               decoration: const InputDecoration(labelText: "รายละเอียดสินค้า"),
             ),
             const SizedBox(height: 20),
 
-            Column(
-              children: [
-                if (_pickedImage != null)
-                  Image.file(_pickedImage!, height: 150),
-                const SizedBox(height: 10),
-                ElevatedButton.icon(
-                  onPressed: pickImage,
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text("ถ่ายรูปสินค้า"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B35),
-                  ),
-                ),
-              ],
+            if (_pickedImage != null) Image.file(_pickedImage!, height: 150),
+            ElevatedButton.icon(
+              onPressed: pickImage,
+              icon: const Icon(Icons.camera_alt),
+              label: const Text("ถ่ายรูปสินค้า"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFF6B35),
+              ),
             ),
             const SizedBox(height: 20),
 

@@ -191,6 +191,41 @@ class _RegisterPageState extends State<RegisterPage> {
       imageUrl = await uploadImage(_pickedImage!);
     }
 
+    // ✅ ตรวจสอบเบอร์ซ้ำใน user ก่อน
+    var existingUser = await db
+        .collection('user')
+        .where('phone', isEqualTo: phoneCtl.text)
+        .limit(1)
+        .get();
+
+    if (existingUser.docs.isNotEmpty) {
+      Get.snackbar("Error", "เบอร์นี้ถูกใช้สมัครผู้ใช้อยู่แล้ว");
+      setState(() => _loading = false);
+      return;
+    }
+
+    // ✅ ตรวจสอบเบอร์กับ rider
+    var existingRider = await db
+        .collection('rider')
+        .where('phone', isEqualTo: phoneCtl.text)
+        .limit(1)
+        .get();
+
+    if (existingRider.docs.isNotEmpty) {
+      var riderPassword = existingRider.docs.first['password'];
+      if (riderPassword == passwordCtl.text) {
+        Get.snackbar(
+          "Error",
+          "ห้ามใช้รหัสผ่านเดียวกับบัญชี Rider",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        setState(() => _loading = false);
+        return;
+      }
+    }
+
+    // ✅ ถ้าไม่มีปัญหา -> บันทึกข้อมูลลง Firestore
     var docRef = db.collection('user').doc();
     await docRef.set({
       'uid': docRef.id,

@@ -96,26 +96,26 @@ class _RegisterRiderPageState extends State<RegisterRiderPage> {
 
     setState(() => _loading = true);
 
-    // อัปโหลดรูป
+    // ✅ อัปโหลดรูปไป Cloudinary
     profileImageUrl = await uploadFile(profileImage!);
     vehicleImageUrl = await uploadFile(vehicleImage!);
 
     if (profileImageUrl == null || vehicleImageUrl == null) {
       setState(() => _loading = false);
-      return; // ถ้าอัปโหลดไม่สำเร็จ
+      return;
     }
 
-    // ตรวจสอบเบอร์ซ้ำ
-    var existingUser = await db
+    // ✅ ตรวจว่าเคยเป็น Rider แล้วหรือยัง
+    var existingRider = await db
         .collection('rider')
         .where('phone', isEqualTo: phoneCtl.text)
         .limit(1)
         .get();
 
-    if (existingUser.docs.isNotEmpty) {
+    if (existingRider.docs.isNotEmpty) {
       Get.snackbar(
         "Error",
-        "เบอร์นี้เคยลงทะเบียนแล้ว",
+        "เบอร์นี้เคยสมัครเป็น Rider แล้ว",
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
@@ -123,7 +123,28 @@ class _RegisterRiderPageState extends State<RegisterRiderPage> {
       return;
     }
 
-    // บันทึกข้อมูล
+    // ✅ ตรวจว่าเบอร์นี้มีอยู่ใน User ไหม
+    var existingUser = await db
+        .collection('user')
+        .where('phone', isEqualTo: phoneCtl.text)
+        .limit(1)
+        .get();
+
+    if (existingUser.docs.isNotEmpty) {
+      var userPassword = existingUser.docs.first['password'];
+      if (userPassword == passwordCtl.text) {
+        Get.snackbar(
+          "Error",
+          "ห้ามใช้รหัสผ่านเดียวกับบัญชีผู้ใช้ (User)",
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        setState(() => _loading = false);
+        return;
+      }
+    }
+
+    // ✅ บันทึกข้อมูล Rider
     var docRef = db.collection('rider').doc();
     await docRef.set({
       'rid': docRef.id,
@@ -141,7 +162,7 @@ class _RegisterRiderPageState extends State<RegisterRiderPage> {
 
     Get.snackbar(
       "สำเร็จ",
-      "สมัครสมาชิกเรียบร้อยแล้ว",
+      "สมัครเป็น Rider เรียบร้อยแล้ว",
       backgroundColor: Colors.green,
       colorText: Colors.white,
     );
