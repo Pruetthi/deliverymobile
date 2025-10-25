@@ -1,3 +1,4 @@
+import 'package:delivery/pages/all_map_sender.dart';
 import 'package:delivery/pages/create_job_page.dart';
 import 'package:delivery/pages/home.dart';
 import 'package:delivery/pages/my_received_jobs_page.dart';
@@ -56,17 +57,11 @@ class CustomBottomBar extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ProfilePage(userData: userData),
+                builder: (_) =>
+                    AllMapSenderPage(senderId: userData['uid'] ?? ''),
               ),
             );
           } else if (index == 4) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ProfilePage(userData: userData),
-              ),
-            );
-          } else if (index == 5) {
             Navigator.push(
               context,
               MaterialPageRoute(
