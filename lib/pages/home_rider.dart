@@ -334,11 +334,20 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                       ),
                     );
                   },
-                  icon: const Icon(Icons.info, size: 18),
-                  label: const Text('ดูรายละเอียด'),
+                  icon: Icon(
+                    job['status'] == 4 ? Icons.check_circle : Icons.info,
+                    size: 18,
+                  ),
+                  label: Text(
+                    job['status'] == 4 ? 'ส่งสำเร็จ' : 'ดูรายละเอียด',
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.orange.shade800,
+                    backgroundColor: job['status'] == 4
+                        ? Colors.green
+                        : Colors.white, // ✅ สีเขียวเมื่อสำเร็จ
+                    foregroundColor: job['status'] == 4
+                        ? Colors.white
+                        : Colors.orange.shade800,
                   ),
                 ),
             ],
