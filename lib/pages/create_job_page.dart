@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
 
 class CreateJobPage extends StatefulWidget {
   final Map<String, dynamic> userData;
@@ -33,6 +34,8 @@ class _CreateJobPageState extends State<CreateJobPage> {
 
   LatLng? selectedPickupLocation;
   String? selectedPickupAddressText;
+  LatLng? currentUserLocation;
+  String? currentUserAddressText;
 
   final ImagePicker _picker = ImagePicker();
   final cloudinary = CloudinaryPublic(
@@ -49,6 +52,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
   void initState() {
     super.initState();
     _loadReceivers();
+    getCurrentLocation();
   }
 
   int _selectedIndex = 0;
@@ -128,6 +132,35 @@ class _CreateJobPageState extends State<CreateJobPage> {
         SnackBar(content: Text('❌ เกิดข้อผิดพลาดในการอัปโหลด: $e')),
       );
     }
+  }
+
+  Future<void> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('กรุณาเปิด GPS เพื่อใช้งานแผนที่')),
+      );
+      return;
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) return;
+    }
+    if (permission == LocationPermission.deniedForever) return;
+
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+    setState(() {
+      currentUserLocation = LatLng(position.latitude, position.longitude);
+    });
+
+    // แปลงเป็นชื่อที่อยู่
+    currentUserAddressText = await getAddressFromLatLng(
+      position.latitude,
+      position.longitude,
+    );
   }
 
   /// ค้นหาผู้รับจากเบอร์โทร
@@ -326,71 +359,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   subtitle: Text("📞 ${receiverData!['phone']}"),
                 ),
               ),
-              const SizedBox(height: 10),
-              const Text(
-                "เลือกตำแหน่งรับสินค้า:",
-                style: TextStyle(fontSize: 16),
-              ),
-              Container(
-                height: 250,
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                child: FlutterMap(
-                  options: MapOptions(
-                    initialCenter:
-                        selectedPickupLocation ?? LatLng(16.245054, 103.250160),
-                    initialZoom: 15,
-                    onTap: (tapPos, latlng) {
-                      setState(() {
-                        selectedPickupLocation = latlng;
-                        selectedPickupAddressText = null;
-                      });
-                    },
-                  ),
-                  children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
-                      userAgentPackageName: 'com.example.delivery_app',
-                    ),
-                    if (selectedPickupLocation != null)
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: selectedPickupLocation!,
-                            width: 80,
-                            height: 80,
-                            child: const Icon(
-                              Icons.store,
-                              color: Colors.green,
-                              size: 40,
-                            ),
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-              if (selectedPickupLocation != null)
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    String address = await getAddressFromLatLng(
-                      selectedPickupLocation!.latitude,
-                      selectedPickupLocation!.longitude,
-                    );
-                    setState(() => selectedPickupAddressText = address);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('📍 ตำแหน่งรับ: $address')),
-                    );
-                  },
-                  icon: const Icon(Icons.check),
-                  label: Text(
-                    selectedPickupAddressText ?? "บันทึกตำแหน่งรับสินค้า",
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green.shade600,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+
               const SizedBox(height: 10),
               const Text("เลือกที่อยู่จัดส่ง:", style: TextStyle(fontSize: 16)),
               RadioListTile<String>(
@@ -409,6 +378,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   });
                 },
               ),
+
               RadioListTile<String>(
                 title: Text("ที่อยู่สำรอง (${address2Text ?? 'กำลังโหลด...'})"),
                 value: 'alt',
@@ -426,7 +396,55 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 },
               ),
             ],
-
+            if (selectedAddress != null)
+              Container(
+                height: 200,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(
+                      selectedAddress!['latitude'],
+                      selectedAddress!['longitude'],
+                    ),
+                    initialZoom: 15,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
+                      userAgentPackageName: 'com.example.delivery_app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(
+                            selectedAddress!['latitude'],
+                            selectedAddress!['longitude'],
+                          ),
+                          width: 80,
+                          height: 80,
+                          child: Column(
+                            children: const [
+                              Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                                size: 40,
+                              ),
+                              Text(
+                                'ตำแหน่งผู้รับ',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             const Divider(),
             TextField(
               controller: itemNameController,
@@ -437,6 +455,99 @@ class _CreateJobPageState extends State<CreateJobPage> {
               controller: itemDetailController,
               decoration: const InputDecoration(labelText: "รายละเอียดสินค้า"),
             ),
+            const SizedBox(height: 10),
+            const Text(
+              "เลือกตำแหน่งรับสินค้า:",
+              style: TextStyle(fontSize: 16),
+            ),
+            Container(
+              height: 250,
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter:
+                      selectedPickupLocation ??
+                      currentUserLocation ??
+                      LatLng(16.245054, 103.250160),
+                  initialZoom: 15,
+                  onTap: (tapPos, latlng) {
+                    setState(() {
+                      selectedPickupLocation = latlng;
+                      selectedPickupAddressText = null;
+                    });
+                  },
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
+                    userAgentPackageName: 'com.example.delivery_app',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      if (currentUserLocation != null)
+                        Marker(
+                          point: currentUserLocation!,
+                          width: 80,
+                          height: 80,
+                          child: Column(
+                            children: [
+                              const Icon(
+                                Icons.person_pin_circle,
+                                color: Colors.blue,
+                                size: 40,
+                              ),
+                              if (currentUserAddressText != null)
+                                Text(
+                                  ('ผู้ส่ง'),
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      if (selectedPickupLocation != null)
+                        Marker(
+                          point: selectedPickupLocation!,
+                          width: 80,
+                          height: 80,
+                          child: const Icon(
+                            Icons.store,
+                            color: Colors.green,
+                            size: 40,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            if (selectedPickupLocation != null)
+              ElevatedButton.icon(
+                onPressed: () async {
+                  String address = await getAddressFromLatLng(
+                    selectedPickupLocation!.latitude,
+                    selectedPickupLocation!.longitude,
+                  );
+                  setState(() => selectedPickupAddressText = address);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('📍 ตำแหน่งรับ: $address')),
+                  );
+                },
+
+                icon: const Icon(Icons.check),
+                label: Text(
+                  selectedPickupAddressText ?? "บันทึกตำแหน่งรับสินค้า",
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade600,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+
             const SizedBox(height: 20),
 
             if (_pickedImage != null)
