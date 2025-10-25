@@ -14,6 +14,47 @@ class JobTrackingPage extends StatefulWidget {
 }
 
 class _JobTrackingPageState extends State<JobTrackingPage> {
+  List<LatLng> routePoints = [];
+  bool routeLoaded = false;
+  bool routeFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    loadInitialRoute();
+  }
+
+  /// ✅ โหลดเส้นทางจากร้าน → ผู้รับ เพียงครั้งเดียว
+  Future<void> loadInitialRoute() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('jobs')
+          .doc(widget.jobId)
+          .get();
+
+      if (!doc.exists) return;
+
+      final data = doc.data()!;
+      final pickupLat = (data['pickup_latitude'] ?? 0).toDouble();
+      final pickupLng = (data['pickup_longitude'] ?? 0).toDouble();
+      final dropLat = (data['latitude'] ?? 0).toDouble();
+      final dropLng = (data['longitude'] ?? 0).toDouble();
+
+      final points = await getRoute(pickupLat, pickupLng, dropLat, dropLng);
+
+      setState(() {
+        routePoints = points;
+        routeLoaded = true;
+      });
+    } catch (e) {
+      debugPrint("❌ โหลดเส้นทางล้มเหลว: $e");
+      setState(() {
+        routeFailed = true; // ✅ บอกว่าโหลดไม่สำเร็จ
+      });
+    }
+  }
+
+  /// ✅ ดึงเส้นทางจาก OSRM API
   Future<List<LatLng>> getRoute(
     double startLat,
     double startLng,
@@ -51,7 +92,7 @@ class _JobTrackingPageState extends State<JobTrackingPage> {
             .doc(widget.jobId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(child: CircularProgressIndicator());
           }
 
@@ -63,115 +104,96 @@ class _JobTrackingPageState extends State<JobTrackingPage> {
           final riderLat = (data['rider_lat'] ?? 0).toDouble();
           final riderLng = (data['rider_lng'] ?? 0).toDouble();
 
-          // ✅ ถ้ามีข้อมูลไรเดอร์ ให้ดึงเส้น 2 ช่วง (pickup→rider และ rider→drop)
           final hasRider = riderLat != 0 && riderLng != 0;
 
-          Future<List<LatLng>> routeFuture = hasRider
-              ? Future.wait([
-                  getRoute(pickupLat, pickupLng, riderLat, riderLng),
-                  getRoute(riderLat, riderLng, dropLat, dropLng),
-                ]).then((routes) => [...routes[0], ...routes[1]])
-              : getRoute(pickupLat, pickupLng, dropLat, dropLng);
+          final center = routePoints.isNotEmpty
+              ? routePoints[routePoints.length ~/ 2]
+              : LatLng(pickupLat, pickupLng);
 
-          return FutureBuilder<List<LatLng>>(
-            future: routeFuture,
-            builder: (context, routeSnapshot) {
-              if (!routeSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final routePoints = routeSnapshot.data!;
-              final center = routePoints.isNotEmpty
-                  ? routePoints[routePoints.length ~/ 2]
-                  : LatLng(pickupLat, pickupLng);
-
-              return FlutterMap(
-                options: MapOptions(initialCenter: center, initialZoom: 13),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
-                    userAgentPackageName: 'com.example.delivery_app',
-                  ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(pickupLat, pickupLng),
-                        width: 80,
-                        height: 80,
-                        child: Column(
-                          children: const [
-                            Icon(Icons.store, color: Colors.green, size: 40),
-                            Text(
-                              "ร้านผู้ส่ง",
-                              style: TextStyle(
-                                color: Colors.green,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (hasRider)
-                        Marker(
-                          point: LatLng(riderLat, riderLng),
-                          width: 80,
-                          height: 80,
-                          child: Column(
-                            children: const [
-                              Icon(
-                                Icons.directions_bike,
-                                color: Colors.blue,
-                                size: 40,
-                              ),
-                              Text(
-                                "ไรเดอร์",
-                                style: TextStyle(
-                                  color: Colors.blue,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
+          return FlutterMap(
+            options: MapOptions(initialCenter: center, initialZoom: 13),
+            children: [
+              TileLayer(
+                urlTemplate:
+                    'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
+                userAgentPackageName: 'com.example.delivery_app',
+              ),
+              // ✅ Marker จุดต่าง ๆ
+              MarkerLayer(
+                markers: [
+                  Marker(
+                    point: LatLng(pickupLat, pickupLng),
+                    width: 80,
+                    height: 80,
+                    child: Column(
+                      children: const [
+                        Icon(Icons.store, color: Colors.green, size: 40),
+                        Text(
+                          "ร้านผู้ส่ง",
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
                           ),
                         ),
-                      Marker(
-                        point: LatLng(dropLat, dropLng),
-                        width: 80,
-                        height: 80,
-                        child: Column(
-                          children: const [
-                            Icon(
-                              Icons.location_on,
-                              color: Colors.red,
-                              size: 40,
-                            ),
-                            Text(
-                              "ผู้รับ",
-                              style: TextStyle(
-                                color: Colors.red,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: routePoints,
-                        color: Colors.orangeAccent,
-                        strokeWidth: 4,
+                  if (hasRider)
+                    Marker(
+                      point: LatLng(riderLat, riderLng),
+                      width: 80,
+                      height: 80,
+                      child: Column(
+                        children: const [
+                          Icon(
+                            Icons.directions_bike,
+                            color: Colors.blue,
+                            size: 40,
+                          ),
+                          Text(
+                            "ไรเดอร์",
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
+                  Marker(
+                    point: LatLng(dropLat, dropLng),
+                    width: 80,
+                    height: 80,
+                    child: Column(
+                      children: const [
+                        Icon(Icons.location_on, color: Colors.red, size: 40),
+                        Text(
+                          "ผู้รับ",
+                          style: TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
-              );
-            },
+              ),
+              // ✅ แสดงเส้นทางเฉพาะเมื่อโหลดสำเร็จ
+              if (routeLoaded && routePoints.isNotEmpty)
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: routePoints,
+                      color: Colors.orangeAccent,
+                      strokeWidth: 4,
+                    ),
+                  ],
+                ),
+            ],
           );
         },
       ),
