@@ -3,10 +3,8 @@ import 'package:delivery/widgets/custom_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloudinary_public/cloudinary_public.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -29,8 +27,12 @@ class _CreateJobPageState extends State<CreateJobPage> {
   Map<String, dynamic>? receiverData;
   String? selectedType;
   Map<String, dynamic>? selectedAddress;
+
   File? _pickedImage;
   String? uploadedImageUrl;
+
+  LatLng? selectedPickupLocation;
+  String? selectedPickupAddressText;
 
   final ImagePicker _picker = ImagePicker();
   final cloudinary = CloudinaryPublic(
@@ -55,7 +57,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     setState(() => _selectedIndex = index);
   }
 
-  /// ✅ โหลดรายชื่อผู้รับทั้งหมด
+  /// โหลดรายชื่อผู้รับทั้งหมด
   Future<void> _loadReceivers() async {
     final snapshot = await _firestore.collection('user').get();
     setState(() {
@@ -65,27 +67,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     });
   }
 
-  /// ✅ ดึงตำแหน่ง GPS ปัจจุบัน
-  Future<Position?> getCurrentLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('กรุณาเปิด GPS ก่อนสร้างงาน')),
-      );
-      return null;
-    }
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return null;
-    }
-    if (permission == LocationPermission.deniedForever) return null;
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
-    );
-  }
-
-  /// ✅ แปลงพิกัดเป็นชื่อสถานที่
+  /// แปลงพิกัดเป็นชื่อสถานที่
   Future<String> getAddressFromLatLng(double lat, double lng) async {
     try {
       List<Placemark> placemarks = await placemarkFromCoordinates(lat, lng);
@@ -100,7 +82,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     return "ไม่พบที่อยู่";
   }
 
-  /// ✅ โหลดชื่อที่อยู่จาก lat/lng
+  /// โหลดชื่อที่อยู่จาก lat/lng ของผู้รับ
   Future<void> loadReceiverAddresses() async {
     if (receiverData != null) {
       final loc1 = receiverData!['location1'];
@@ -121,7 +103,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
   }
 
-  /// ✅ เลือกรูปจากกล้อง
+  /// เลือกรูปจากกล้อง
   Future<void> pickImage() async {
     final XFile? image = await _picker.pickImage(
       source: ImageSource.camera,
@@ -132,7 +114,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
   }
 
-  /// ✅ อัปโหลดรูปไป Cloudinary
+  /// อัปโหลดรูปไป Cloudinary
   Future<void> uploadImage() async {
     if (_pickedImage == null) return;
     try {
@@ -148,7 +130,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
   }
 
-  /// ✅ ค้นหาผู้รับจากเบอร์โทร
+  /// ค้นหาผู้รับจากเบอร์โทร
   Future<void> searchReceiver() async {
     final phone = phoneController.text.trim();
     if (phone.isEmpty) {
@@ -181,7 +163,7 @@ class _CreateJobPageState extends State<CreateJobPage> {
     setState(() => _loading = false);
   }
 
-  /// ✅ แสดง dialog เลือกผู้รับจากลิสต์
+  /// แสดง dialog เลือกผู้รับจากลิสต์
   void _showReceiverList() {
     showDialog(
       context: context,
@@ -220,11 +202,15 @@ class _CreateJobPageState extends State<CreateJobPage> {
     );
   }
 
-  /// ✅ สร้างงานส่งสินค้า
+  /// สร้างงานส่งสินค้า
   Future<void> createJob() async {
-    if (receiverData == null || selectedAddress == null) {
+    if (receiverData == null ||
+        selectedAddress == null ||
+        selectedPickupLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ กรุณาเลือกผู้รับและที่อยู่')),
+        const SnackBar(
+          content: Text('⚠️ กรุณาเลือกผู้รับ, ที่อยู่ และตำแหน่งรับสินค้า'),
+        ),
       );
       return;
     }
@@ -237,11 +223,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
     }
 
     setState(() => _loading = true);
-    Position? currentLocation = await getCurrentLocation();
-    if (currentLocation == null) {
-      setState(() => _loading = false);
-      return;
-    }
 
     try {
       if (_pickedImage != null && uploadedImageUrl == null) {
@@ -255,8 +236,9 @@ class _CreateJobPageState extends State<CreateJobPage> {
         "sender_uid": widget.userData['uid'],
         "sender_name": widget.userData['name'],
         "sender_phone": widget.userData['phone'],
-        "pickup_latitude": currentLocation.latitude,
-        "pickup_longitude": currentLocation.longitude,
+        "pickup_latitude": selectedPickupLocation!.latitude,
+        "pickup_longitude": selectedPickupLocation!.longitude,
+        "pickup_address": selectedPickupAddressText ?? "",
         "address_type": selectedType,
         "address_text": selectedAddress!['text'],
         "latitude": selectedAddress!['latitude'],
@@ -291,7 +273,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
           children: [
             Row(
               children: [
-                // ช่องกรอกเบอร์โทรผู้รับ
                 Expanded(
                   child: TextField(
                     controller: phoneController,
@@ -306,7 +287,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // ปุ่มดูรายชื่อผู้รับ
                 ElevatedButton.icon(
                   onPressed: _showReceiverList,
                   icon: const Icon(Icons.list),
@@ -347,6 +327,71 @@ class _CreateJobPageState extends State<CreateJobPage> {
                 ),
               ),
               const SizedBox(height: 10),
+              const Text(
+                "เลือกตำแหน่งรับสินค้า:",
+                style: TextStyle(fontSize: 16),
+              ),
+              Container(
+                height: 250,
+                margin: const EdgeInsets.symmetric(vertical: 10),
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter:
+                        selectedPickupLocation ?? LatLng(16.245054, 103.250160),
+                    initialZoom: 15,
+                    onTap: (tapPos, latlng) {
+                      setState(() {
+                        selectedPickupLocation = latlng;
+                        selectedPickupAddressText = null;
+                      });
+                    },
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
+                      userAgentPackageName: 'com.example.delivery_app',
+                    ),
+                    if (selectedPickupLocation != null)
+                      MarkerLayer(
+                        markers: [
+                          Marker(
+                            point: selectedPickupLocation!,
+                            width: 80,
+                            height: 80,
+                            child: const Icon(
+                              Icons.store,
+                              color: Colors.green,
+                              size: 40,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+              if (selectedPickupLocation != null)
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    String address = await getAddressFromLatLng(
+                      selectedPickupLocation!.latitude,
+                      selectedPickupLocation!.longitude,
+                    );
+                    setState(() => selectedPickupAddressText = address);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('📍 ตำแหน่งรับ: $address')),
+                    );
+                  },
+                  icon: const Icon(Icons.check),
+                  label: Text(
+                    selectedPickupAddressText ?? "บันทึกตำแหน่งรับสินค้า",
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade600,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              const SizedBox(height: 10),
               const Text("เลือกที่อยู่จัดส่ง:", style: TextStyle(fontSize: 16)),
               RadioListTile<String>(
                 title: Text("ที่อยู่หลัก (${address1Text ?? 'กำลังโหลด...'})"),
@@ -380,57 +425,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   });
                 },
               ),
-
-              // ------------------- แผนที่ -------------------
-              if (selectedAddress != null)
-                Container(
-                  height: 200,
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  child: FlutterMap(
-                    options: MapOptions(
-                      initialCenter: LatLng(
-                        selectedAddress!['latitude'],
-                        selectedAddress!['longitude'],
-                      ),
-                      initialZoom: 15,
-                    ),
-                    children: [
-                      TileLayer(
-                        urlTemplate:
-                            'https://tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey=88f9690d7c84430e8ebb75502e511790',
-                        userAgentPackageName: 'com.example.delivery_app',
-                      ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(
-                              selectedAddress!['latitude'],
-                              selectedAddress!['longitude'],
-                            ),
-                            width: 80,
-                            height: 80,
-                            child: Column(
-                              children: const [
-                                Icon(
-                                  Icons.location_on,
-                                  color: Colors.red,
-                                  size: 40,
-                                ),
-                                Text(
-                                  'ตำแหน่งผู้รับ',
-                                  style: TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
             ],
 
             const Divider(),
@@ -452,20 +446,17 @@ class _CreateJobPageState extends State<CreateJobPage> {
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(12), // ขอบโค้งมน
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1), // เงาเบา ๆ
+                        color: Colors.black.withOpacity(0.1),
                         blurRadius: 6,
                         offset: const Offset(0, 3),
                       ),
                     ],
                   ),
-                  clipBehavior: Clip.antiAlias, // ตัดส่วนที่ล้นขอบ
-                  child: Image.file(
-                    _pickedImage!,
-                    fit: BoxFit.cover, // ให้รูปเต็มพื้นที่
-                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Image.file(_pickedImage!, fit: BoxFit.cover),
                 ),
               ),
             const SizedBox(height: 10),
@@ -483,7 +474,6 @@ class _CreateJobPageState extends State<CreateJobPage> {
               ),
             ),
             const SizedBox(height: 20),
-
             ElevatedButton.icon(
               onPressed: createJob,
               icon: const Icon(Icons.check),
