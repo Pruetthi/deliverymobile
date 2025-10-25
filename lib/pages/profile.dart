@@ -41,7 +41,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
         final place1 = placemarks1.first;
         address1 =
-            "${place1.street ?? ''}, ${place1.subLocality ?? ''}, ${place1.locality ?? ''}, ${place1.administrativeArea ?? ''}, ${place1.country ?? ''}";
+            "${place1.street ?? ''}, ${place1.subLocality ?? ''}, ${place1.locality ?? ''}";
       }
 
       if (loc2 != null) {
@@ -51,7 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
         );
         final place2 = placemarks2.first;
         address2 =
-            "${place2.street ?? ''}, ${place2.subLocality ?? ''}, ${place2.locality ?? ''}, ${place2.administrativeArea ?? ''}, ${place2.country ?? ''}";
+            "${place2.street ?? ''}, ${place2.subLocality ?? ''}, ${place2.locality ?? ''}";
       }
     } catch (e) {
       debugPrint('Error loading address: $e');
@@ -70,20 +70,23 @@ class _ProfilePageState extends State<ProfilePage> {
       backgroundColor: const Color(0xFFFFF8F0),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Card(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  color: const Color(0xFFFFC857),
-                  elevation: 4,
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: widget.userData['status'] == 'user'
-                        ? _buildUserProfile()
-                        : _buildRiderProfile(),
+          : SingleChildScrollView(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 60, 16, 24),
+                  child: Card(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    color: Colors.white,
+                    elevation: 8,
+                    shadowColor: Colors.orange.withOpacity(0.3),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: widget.userData['status'] == 'user'
+                          ? _buildUserProfile()
+                          : _buildRiderProfile(),
+                    ),
                   ),
                 ),
               ),
@@ -107,22 +110,27 @@ class _ProfilePageState extends State<ProfilePage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildProfilePicture(widget.userData['profile_picture']),
+        const SizedBox(height: 16),
         Text(
-          'ชื่อ: ${widget.userData['name']}',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          widget.userData['name'] ?? 'ไม่ระบุชื่อ',
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
+        const SizedBox(height: 6),
         Text(
-          'เบอร์โทร: ${widget.userData['phone']}',
-          style: const TextStyle(fontSize: 18),
+          widget.userData['phone'] ?? '-',
+          style: const TextStyle(fontSize: 18, color: Colors.black54),
         ),
         const SizedBox(height: 20),
-        Text(
-          'ที่อยู่ 1: ${address1 ?? 'ไม่พบข้อมูล'}',
-          style: const TextStyle(fontSize: 16),
-        ),
-        Text(
-          'ที่อยู่ 2: ${address2 ?? 'ไม่พบข้อมูล'}',
-          style: const TextStyle(fontSize: 16),
+        _buildInfoRow(Icons.home, 'ที่อยู่ 1', address1 ?? 'ไม่พบข้อมูล'),
+        const SizedBox(height: 8),
+        _buildInfoRow(
+          Icons.home_filled,
+          'ที่อยู่ 2',
+          address2 ?? 'ไม่พบข้อมูล',
         ),
         const SizedBox(height: 30),
         _buildLogoutButton(),
@@ -135,19 +143,25 @@ class _ProfilePageState extends State<ProfilePage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         _buildProfilePicture(widget.userData['profile_picture']),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Text(
-          'ชื่อ: ${widget.userData['name']}',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          widget.userData['name'] ?? 'ไม่ระบุชื่อ',
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
         ),
+        const SizedBox(height: 6),
         Text(
-          'เบอร์โทร: ${widget.userData['phone']}',
-          style: const TextStyle(fontSize: 18),
+          widget.userData['phone'] ?? '-',
+          style: const TextStyle(fontSize: 18, color: Colors.black54),
         ),
         const SizedBox(height: 16),
-        Text(
-          'ทะเบียนรถ: ${widget.userData['vehicle_number']}',
-          style: const TextStyle(fontSize: 18),
+        _buildInfoRow(
+          Icons.directions_car,
+          'ทะเบียนรถ',
+          widget.userData['vehicle_number'] ?? '-',
         ),
         const SizedBox(height: 16),
         _buildVehiclePicture(widget.userData['vehicle_picture']),
@@ -158,73 +172,111 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildProfilePicture(String? url) {
-    return SizedBox(
-      width: 200,
-      height: 200,
-      child: Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.orange.shade800, width: 2),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(100),
-          child: url != null && url.isNotEmpty
-              ? Image.network(
-                  url,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, _, __) {
-                    return Icon(
-                      Icons.account_circle,
-                      size: 200,
-                      color: Colors.grey.shade700,
-                    );
-                  },
-                )
-              : Icon(
-                  Icons.account_circle,
-                  size: 200,
-                  color: Colors.grey.shade700,
-                ),
-        ),
+    return CircleAvatar(
+      radius: 70,
+      backgroundColor: Colors.orange.shade100,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(70),
+        child: url != null && url.isNotEmpty
+            ? Image.network(
+                url,
+                fit: BoxFit.cover,
+                width: 140,
+                height: 140,
+                errorBuilder: (context, _, __) {
+                  return Icon(
+                    Icons.account_circle,
+                    size: 140,
+                    color: Colors.grey.shade700,
+                  );
+                },
+              )
+            : Icon(
+                Icons.account_circle,
+                size: 140,
+                color: Colors.grey.shade700,
+              ),
       ),
     );
   }
 
   Widget _buildVehiclePicture(String? url) {
-    return SizedBox(
-      width: 300,
+    return Container(
       height: 150,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.grey.shade300,
-          borderRadius: BorderRadius.circular(12),
-          image: url != null && url.isNotEmpty
-              ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
-              : null,
-        ),
-        child: url == null || url.isEmpty
-            ? const Icon(Icons.directions_bike, size: 50)
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.grey.shade200,
+        image: url != null && url.isNotEmpty
+            ? DecorationImage(image: NetworkImage(url), fit: BoxFit.cover)
             : null,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.3),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
+      child: url == null || url.isEmpty
+          ? const Center(
+              child: Icon(Icons.directions_bike, size: 60, color: Colors.grey),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: Colors.orange.shade600),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 15, color: Colors.black87),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildLogoutButton() {
-    return ElevatedButton.icon(
-      icon: const Icon(Icons.logout),
-      label: const Text("Logout"),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.redAccent,
-        minimumSize: const Size(double.infinity, 50),
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.logout),
+        label: const Text("Logout", style: TextStyle(fontSize: 16)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.redAccent,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 4,
+          shadowColor: Colors.red.withOpacity(0.5),
+        ),
+        onPressed: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => LoginPage()),
+          );
+        },
       ),
-      onPressed: () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => LoginPage()),
-        );
-      },
     );
   }
 }
