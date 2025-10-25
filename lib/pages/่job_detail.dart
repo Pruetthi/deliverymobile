@@ -321,7 +321,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       const SizedBox(height: 10),
                       _buildInfoRow(
                         Icons.phone_outlined,
-                        'ชื่อไรเดอร์: ${widget.jobData['rider_phone']}',
+                        'เบอร์ไรเดอร์: ${widget.jobData['rider_phone']}',
                       ),
                       const SizedBox(height: 10),
                       Divider(color: Colors.white, thickness: 1, height: 20),
