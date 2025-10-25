@@ -216,33 +216,6 @@ class _MyReceivedJobsPageState extends State<MyReceivedJobsPage> {
                             ),
                           ),
                           const SizedBox(height: 10),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => RidersMapPage(
-                                    receiverUid: widget.userData['uid'],
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.delivery_dining,
-                              color: Colors.white,
-                            ),
-                            label: const Text(
-                              "ตำแหน่งไรเดอร์",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blueAccent,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
