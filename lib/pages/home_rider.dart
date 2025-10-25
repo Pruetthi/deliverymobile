@@ -486,7 +486,7 @@ class RiderLocationUpdater {
         Geolocator.getPositionStream(
           locationSettings: const LocationSettings(
             accuracy: LocationAccuracy.bestForNavigation,
-            distanceFilter: 5,
+            distanceFilter: 3,
           ),
         ).listen((position) async {
           try {
