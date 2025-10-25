@@ -297,6 +297,7 @@ class _JobDetailPageState extends State<JobDetailPage> {
                         Icons.home,
                         'ที่อยู่ผู้ส่ง: $_senderAddress',
                       ),
+
                       const SizedBox(height: 10),
                       _buildInfoRow(
                         Icons.person_outline,
@@ -311,6 +312,16 @@ class _JobDetailPageState extends State<JobDetailPage> {
                       _buildInfoRow(
                         Icons.home,
                         'ที่อยู่ผู้รับ: $_receiverAddress',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.photo_camera_front_outlined,
+                        'ชื่อไรเดอร์: ${widget.jobData['rider_name']}',
+                      ),
+                      const SizedBox(height: 10),
+                      _buildInfoRow(
+                        Icons.phone_outlined,
+                        'ชื่อไรเดอร์: ${widget.jobData['rider_phone']}',
                       ),
                       const SizedBox(height: 10),
                       Divider(color: Colors.white, thickness: 1, height: 20),
