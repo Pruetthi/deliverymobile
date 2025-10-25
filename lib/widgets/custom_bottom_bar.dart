@@ -75,7 +75,7 @@ class CustomBottomBar extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         selectedItemColor: const Color(0xFFFF6B35),
-        unselectedItemColor: Colors.grey.shade600,
+        unselectedItemColor: const Color(0xFFFF6B35),
         selectedFontSize: 12,
         unselectedFontSize: 12,
         items: const [
