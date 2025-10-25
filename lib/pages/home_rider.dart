@@ -156,8 +156,8 @@ class _HomeRiderPageState extends State<HomeRiderPage> {
                     ),
                     Text(
                       showAvailableJobs
-                          ? 'แสดงเฉพาะงานที่ยังไม่มีใครรับ (status = 1)'
-                          : 'แสดงเฉพาะงานที่คุณรับแล้ว',
+                          ? 'งานที่ยังไม่มีใครรับ '
+                          : 'งานที่คุณรับแล้ว',
                       style: const TextStyle(fontSize: 14, color: Colors.brown),
                     ),
                     const SizedBox(height: 12),
