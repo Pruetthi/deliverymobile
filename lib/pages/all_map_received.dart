@@ -68,8 +68,13 @@ class _AllMapReceivedPageState extends State<AllMapReceivedPage> {
     double endLat,
     double endLng,
   ) async {
+    const accessToken =
+        'pk.eyJ1IjoiYXBpY2hhdDE4ODciLCJhIjoiY21oNXJzMzJ3MGF3YzJrb2F2ZGhrM3U4OCJ9.44XsFfpMgJkOhaxRiVVOlA'; // 🔹 ใส่ token ของคุณตรงนี้
+
     final url = Uri.parse(
-      'https://router.project-osrm.org/route/v1/driving/$startLng,$startLat;$endLng,$endLat?overview=full&geometries=geojson',
+      'https://api.mapbox.com/directions/v5/mapbox/driving/'
+      '$startLng,$startLat;$endLng,$endLat'
+      '?geometries=geojson&access_token=$accessToken',
     );
 
     final response = await http.get(url);
@@ -78,7 +83,7 @@ class _AllMapReceivedPageState extends State<AllMapReceivedPage> {
       final coords = data['routes'][0]['geometry']['coordinates'] as List;
       return coords.map((c) => LatLng(c[1], c[0])).toList();
     } else {
-      throw Exception('ไม่สามารถดึงเส้นทางได้');
+      throw Exception('ไม่สามารถดึงเส้นทางจาก Mapbox ได้');
     }
   }
 
